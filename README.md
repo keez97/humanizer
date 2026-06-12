@@ -39,8 +39,8 @@ Do NOT use on: chat replies, status updates, tables, code, commit messages, JSON
 
 | Mode | Active rules | Use for |
 |---|---|---|
-| `full` | All 64 rules (incl. the §4 detection-resistance layer), soul/imperfection mandate, full self-scoring battery | Graded essays, cover letters, exec summaries for human readers, published body copy, method narratives |
-| `light` | Banned vocab + em-dash + signpost density only. De-hedging suppressed (rules 20, 23, 29, 57 are OFF) | Analytical docs — consulting memos, case studies, technical docs, validation scorecards. Preserves `speculative`/`inferred` confidence labels. |
+| `full` | Every tell (Layers A–D), the honest-limit detection-resistance layer, soul/imperfection mandate, full self-scoring battery | Graded essays, cover letters, exec summaries for human readers, published body copy, method narratives |
+| `light` | Banned vocab (C2) + em-dash (C5) + signpost density (C8) only. De-hedging suppressed (tell D1 is OFF) | Analytical docs — consulting memos, case studies, technical docs, validation scorecards. Preserves `speculative`/`inferred` confidence labels. |
 | `off` | Skill not applied | Chat, tables, code, internal artifacts |
 
 The de-hedging suppression in `light` mode is a binding invariant, not a style preference. The source-quality protocol requires confidence labels to survive on analytical deliverables.
@@ -56,30 +56,30 @@ python3 ~/.claude/skills/humanizer/score.py <draft-file> --mode light
 
 Ship gate: ALL HARD checks pass AND fewer than 3 soft gates fail. Two-pass cap — do not iterate beyond two battery cycles. In `--mode light`, only checks #6 (banned vocab), #7 (em-dash), #8 (signpost density) are active.
 
-## What's new in v2.5.0
+## What's new in v2.6.0
 
-- **Detection-aware statistical layer (rules 47-57):** targets the axis AI detectors actually score on — sentence-length CV (burstiness), paragraph-length variance, signpost density, tricolon saturation, negation-reversal density, colon-restatement density, over-hedging, lexical banlist (29 words), em-dash hard gate, contractions alibi floor.
-- **Mode tiering:** `full` / `light` / `off` — light mode is now the correct default for analytical deliverables.
-- **Four-pass workflow:** architecture (Pass 1) → sentence-level (Pass 2) → lexical (Pass 3) → audit (Pass 4) → read-aloud (Pass 5). Order matters — do not combine.
-- **Self-scoring battery** (`score.py`) as ship gate with HARD/soft distinction.
-- **Analytical and argumentative patterns (rules 19-24):** colon-with-restatement, hedge-everything numerics, frame-then-pivot, tidy summary-clause endings, numbered-list uniformity, stacked declaratives.
-- **Structural patterns (rules 32-39):** colon-lead cascades, categorical academic pronouncements, stacked nominalizations, implication/lesson closers, rule-of-three saturation, roadmap sentences, sentence-length monotony, opening-word repetition.
-- **Rhetorical-craft patterns (rules 40-46):** source-review framing, slogan-y standalone sentences, paired coined compounds, clever inversions/chiasmus, performative similes, tidy concession patterns, patterned issue paragraphs.
-- **Over-humanizing trap** section: CV ceiling (0.65 max), imperfection rationing, no folksiness for its own sake.
+- **Full restructure / dedup.** The accreted ~64 numbered rules (many of which covered the same tell at instance-level *and* density-level) are consolidated into one deduplicated set of tells, grouped by the layer you fix them at: Architecture (A) → Sentence & rhetoric (B) → Lexical & surface (C) → Hedging & distribution (D). ~50% shorter, no operative content lost. SKILL.md is the canonical rule set.
+- **Honest Limits (detection-resistance) promoted to the top.** A 2026-06-12 controlled study (GPTZero Model 4.6b oracle) established that editing AI-drafted text does not beat a trained classifier — the document verdict is driven by authorship *direction*, which editing can't change. The skill is now framed as a quality tool, not a detector-evasion tool. The procedural-genre floor and the integrity routing are stated explicitly.
+- **Layer D caveat.** The burstiness/CV target can push *up* the AI score on analytical/technical text; the honest-limit findings govern when they conflict with the distribution battery.
 
-## Patterns at a glance
+## What carried over (v2.5.0 foundations)
 
-57 rules organized across six clusters. Full definitions, before/after examples, and mode-applicability flags are in `SKILL.md`.
+- Detection-aware statistical layer (tells D1–D6 / battery): sentence-length CV, paragraph-length variance, signpost density, tricolon saturation, negation-reversal density, hedge density, lexical banlist (29 words), em-dash hard gate, contractions alibi floor.
+- Mode tiering (`full` / `light` / `off`); light mode is the default for analytical deliverables, with de-hedging suppressed as a binding invariant.
+- Five-pass workflow: architecture → sentence → lexical → audit → read-aloud. Order matters.
+- Self-scoring battery (`score.py`) as ship gate with HARD/soft distinction.
 
-| Cluster | Rules | What it catches |
+## Tells at a glance
+
+The deduplicated tells live in four fix-order layers. Full definitions, before/after examples, density thresholds, and mode flags are in `SKILL.md`.
+
+| Layer | IDs | What it catches |
 |---|---|---|
-| Content | 1-6 | Significance inflation, notability name-dropping, -ing analyses, promotional language, vague attributions, formulaic challenges sections |
-| Language & grammar | 7-12 | AI vocabulary (surface + analytical sub-list), copula avoidance, negative parallelisms, rule of three, synonym cycling, false ranges |
-| Style | 13-18 | Em dash, boldface, inline-header lists, title case headings, emojis, curly quotes |
-| Analytical/argumentative | 19-24, 28-31 | Colon-with-restatement, hedge-everything numerics, frame-then-pivot, tidy summary endings, numbered-list uniformity, stacked declaratives, filler phrases, excessive hedging, generic conclusions, hyphenated word-pair overuse |
-| Structural | 32-39 | Colon-lead cascades, categorical pronouncements, stacked nominalizations, implication closers, rule-of-three saturation, roadmap sentences, sentence-length monotony, opening-word repetition |
-| Rhetorical-craft | 40-46 | Source-review framing, slogan-y standalones, paired coined compounds, clever inversions, performative similes, tidy concession patterns, patterned issue paragraphs |
-| Statistical-distribution | 47-57 | Sentence-length CV, perplexity anchors, paragraph-length variance, framework-mapping enumeration, lexical banlist (29 words), em-dash hard gate, signpost density, tricolon density, negation-reversal density, colon-restatement density, over-hedging |
+| A — Architecture | A1–A5 | Source-review framing, patterned issue paragraphs / list uniformity, roadmap sentences, formulaic "challenges" sections, abstract framing-tissue concentration |
+| B — Sentence & rhetoric | B1–B15 | Significance inflation, -ing pseudo-depth, copula avoidance, negative parallelism, rule of three, false ranges, synonym cycling, frame-then-pivot, tidy closers/slogans/lesson-closers, stacked declaratives & length monotony, clever inversions, performative similes, tidy concessions, colon-restatement & cascades, opening-word repetition |
+| C — Lexical & surface | C1–C11 | AI vocabulary, hard banlist (29 words), categorical pronouncements, nominalizations/coined compounds, em dash, curly quotes/boldface/emojis, filler, signpost & connective density, promotional language, vague attributions, notability name-dropping |
+| D — Hedging & distribution | D1–D6 | Hedging (instance/numeric/density — suppressed in light), sentence-length CV, paragraph-length variance, perplexity/specificity anchors, framework-mapping enumeration, contractions alibi floor |
+| Communication artifacts | — | Chatbot artifacts, knowledge-cutoff disclaimers, sycophantic tone, generic positive conclusions |
 
 ## References
 
@@ -88,7 +88,8 @@ Ship gate: ALL HARD checks pass AND fewer than 3 soft gates fail. Two-pass cap �
 
 ## Version history
 
-- **2.5.0** — Statistical-distribution layer (rules 47-57), mode tiering (full/light/off), self-scoring battery (`score.py`), analytical/argumentative patterns (rules 19-24), structural patterns (rules 32-39), rhetorical-craft patterns (rules 40-46), over-humanizing trap guardrails, four-pass workflow
+- **2.6.0** — Detection-resistance layer promoted to top (honest limits of editing AI-drafted text vs. trained classifiers; procedural-genre floor; integrity routing). Full restructure: ~64 instance+density rules deduplicated into one tell set across four fix-order layers (A/B/C/D); ~50% shorter, no operative content lost. SKILL.md is canonical; battery and modes unchanged.
+- **2.5.0** — Statistical-distribution layer, mode tiering (full/light/off), self-scoring battery (`score.py`), analytical/argumentative + structural + rhetorical-craft patterns, over-humanizing trap guardrails, four-pass workflow
 - **2.3.0** — Added pattern #25: hyphenated word pair overuse
 - **2.2.0** — Added final "obviously AI generated" audit + second-pass rewrite prompts
 - **2.1.1** — Fixed pattern #18 example (curly quotes vs straight quotes)
