@@ -1,13 +1,13 @@
 ---
 name: humanizer
-version: 2.6.0
+version: 2.7.0
 description: |
   Remove signs of AI-generated writing from text — descriptive prose (heritage
   puffery, inflated symbolism, promotional language) and analytical/argumentative
   writing (colon-restatement, hedge-everything numerics, frame-then-pivot cadence,
   tidy summary endings, stacked declaratives). Includes a statistical-distribution
-  layer, mode tiering (full/light/off), a self-scoring script, and an honest
-  detection-resistance layer.
+  layer, mode tiering (full/light/off/detect), a self-scoring script, optional
+  writing-sample voice calibration, and an honest detection-resistance layer.
 allowed-tools:
   - Read
   - Write
@@ -52,6 +52,15 @@ Every rule applies: all named tells, the statistical-distribution targets, the s
 ### `off`
 Skill not applied. Use for: chat replies, status updates, tables, code, commit messages, JSONL/YAML, internal artifacts (state.md, plans, handoffs, source-ledgers), frontend chrome and structured-view scaffolding.
 
+### `detect`
+**Flag-only — no rewrite.** Audit the text and report tells without changing a word. Use when the writer wants to decide what to fix, when the text is someone else's or already published, or as a pipeline/gate check. Triggers: "detect", "flag only", "audit", "scan", "what's AI here". Output the tells grouped by severity, each with the offending span quoted and a one-line verdict — **definitely fix** vs **judgment call** (some AI-associated moves are fine in small doses; a lone tell is not a confession):
+
+- **P0 — credibility-killers:** chatbot artifacts, knowledge-cutoff disclaimers, vague attribution with no source, significance inflation on routine facts.
+- **P1 — obvious AI smell:** the structural/cadence tells (reshuffleable paragraphs, colon-cascades, stacked declaratives, rule-of-three saturation, treadmill restatement, source-review framing).
+- **P2 — polish:** lone surface tells — a single hyphenated pair, one mild idiom, isolated formatting.
+
+If the text is clean, say so. Pair with `score.py` for the mechanical half.
+
 ### Tiering table
 
 | Output class | Mode | Rationale |
@@ -75,6 +84,8 @@ Skill not applied. Use for: chat replies, status updates, tables, code, commit m
 3. **Specificity beats randomness.** A concrete number, named case, or precise mechanism raises perplexity *and* improves the writing. Random syntactic swaps raise perplexity while degrading readability — wrong trade.
 4. **Two-pass cap.** Battery → revise once → recheck → stop. Looping against the checklist over-optimizes toward the battery itself, which becomes its own signature. If two passes don't clear HARD gates, the problem is content (too generic, too abstract) — add specificity, not noise.
 5. **Preserve alibis** (see § Alibis). Contractions, occasional awkward-but-correct phrasing, loose domain idiom, consistent non-US spelling, sentence-initial And/But — these are human fingerprints. Do not sand them away.
+6. **Flag clusters, not isolated tells.** A single em-dash, one tricolon, or one "however" means nothing — co-occurrence is the signal. Em-dash + rule-of-three + a banlist word + a tidy "In conclusion" in the same passage is a confession; any one alone, in prose that is otherwise specific and stance-bearing, is not. Require a cluster before rewriting, or you over-edit human texture toward the average voice classifiers are trained on.
+7. **Never humanize quoted or illustrative text.** Quoted source material, block quotes, cited passages, and text explicitly marked as an example are off-limits — flag them, don't rewrite them. Only edit the author's own prose. (`score.py` already strips code blocks, tables, and headings; this is the prose-judgment version for citations.)
 
 ---
 
@@ -89,6 +100,23 @@ How to add voice: **have opinions** (react, don't just report); **vary rhythm** 
 > **Before (clean but soulless):** The experiment produced interesting results. The agents generated 3 million lines of code. Some developers were impressed while others were skeptical. The implications remain unclear.
 >
 > **After (has a pulse):** I genuinely don't know how to feel about this one. 3 million lines of code, generated while the humans presumably slept. Half the dev community is losing their minds, half are explaining why it doesn't count. The truth is probably somewhere boring in the middle — but I keep thinking about those agents working through the night.
+
+---
+
+## Voice calibration (optional — `full` mode, when a sample is provided)
+
+If the writer gives a sample of their own writing ("match my voice — here's a post"), read it *before* rewriting and match it by substitution rather than imposing the default voice. Match:
+
+- **Sentence-length distribution — and its variance, not just the average.** If they write both 5-word and 30-word sentences, do the same. Matching only the mean re-introduces uniformity.
+- **Vocabulary register.** Don't upgrade — if they write "stuff" and "things", keep that; don't promote to "elements" and "components".
+- **Paragraph openings** (jump straight in vs. set context first) and **rhythm** (their pattern of short/long).
+- **Punctuation habits** — semicolons, parentheticals, dashes, ellipses. If they never use semicolons, neither should the output.
+- **Contraction rate** and any **recurring phrases or tics**.
+- **Hedging / confidence conventions** — how *they* signal uncertainty, not AI-style stacking.
+
+Replace AI patterns with patterns from the sample, not with generic "natural" prose. Final check: *would the author recognize this as something they might have written?*
+
+**Carve-out:** `full`-mode only, and only when a sample is given. In `light` mode it stays off — analytical deliverables keep their neutral register, and a sample must not pull a consulting memo toward a personal voice. With no sample, fall back to § Soul defaults (`full`) or neutral register (`light`).
 
 ---
 
@@ -110,9 +138,11 @@ Each tell appears once, with its instance-form and any density threshold folded 
 
 **A5 — The frame is the fingerprint.** AI tells concentrate in the *abstract framing tissue* — the generalized opener, the tidy conclusion, the aphoristic section pivots — while case-grounded middle paragraphs read human. A sentence whose only job is *navigation* flags regardless of register: the formal joint ("which is precisely why", "and that is where") and the folksy joint ("Here's what bothers me, though") earn the same flag. **Fix:** open inside a concrete case (no generalized thesis-opener); ground every abstract claim in a named example immediately; end on a case or an admission, never a conclusion-shaped conclusion. Pivots must ride *inside* a sentence that also carries case content ("Disney is the deal that breaks my rule, though: $7.4bn in 2006 looked rich and…"), never as a standalone connective sentence.
 
+**A6 — Reshuffleable paragraphs.** AI generates parallel blocks instead of an unfolding argument; each paragraph is a self-contained mini-thesis with its own setup and resolution. *Test:* can you swap ¶2 and ¶4 without breaking the piece? If yes, it's AI. **Fix:** make ¶N+1 depend on something concrete in ¶N — a reference, a callback, a "this is why" link. If two paragraphs are interchangeable, merge them or cut one.
+
 ## Layer B — Sentence and rhetoric
 
-**B1 — Significance / legacy inflation.** *Watch:* stands/serves as, is a testament/reminder, a pivotal/crucial/key moment, underscores its importance, reflects broader, marking a shift, evolving landscape, focal point, indelible mark, deeply rooted. AI puffs importance by asserting that arbitrary details represent a broader trend. **Fix:** state what the thing is and does.
+**B1 — Significance / legacy inflation (incl. symbolic gloss).** *Watch:* stands/serves as, is a testament/reminder, a pivotal/crucial/key moment, underscores its importance, reflects broader, marking a shift, evolving landscape, focal point, indelible mark, deeply rooted. A narrower cousin is the **symbolic gloss** — telling the reader what a fact *means* rather than letting it stand: "represents", "symbolizes", "speaks to", "embodies", "reflects broader anxieties about". AI puffs importance by asserting that arbitrary details represent a broader trend. **Fix:** state what the thing is and does; cut the gloss and let the fact carry it ("The factory closed in 2009. Three hundred jobs.").
 
 > …established in 1989, marking a pivotal moment in the evolution of regional statistics. → …established in 1989 to collect and publish regional statistics independently from Spain's national office.
 
@@ -120,7 +150,7 @@ Each tell appears once, with its instance-form and any density threshold folded 
 
 **B3 — Copula avoidance.** *Watch:* serves as / stands as / represents / boasts / features / offers, used to dodge "is/are/has." **Fix:** restore the copula. "Gallery 825 is the exhibition space" beats "serves as."
 
-**B4 — Negative parallelism and definitional negation.** "Not just X but Y", "It's not merely a song, it's a statement", and the analytical cousin "X, not Y" / "a feature, not a flaw" / "X rather than Y". AI manufactures precision by defining a thing against what it isn't; the contrast usually adds nothing. **Fix:** cut the negation, say what it is. *Density:* over ~500 words the **second** instance is the tell, not the first. ⚠ This is the trap that sneaks in while "adding voice" — it *feels* emphatic and human, so audit every voice edit for it.
+**B4 — Negative parallelism and definitional negation.** "Not just X but Y", "It's not merely a song, it's a statement", "it does more than X; it Y", and the analytical cousin "X, not Y" / "a feature, not a flaw" / "X rather than Y". AI manufactures precision by defining a thing against what it isn't; the contrast usually adds nothing. **Fix:** cut the negation, say what it is. *Density:* over ~500 words the **second** instance is the tell, not the first. ⚠ This is the trap that sneaks in while "adding voice" — it *feels* emphatic and human, so audit every voice edit for it.
 
 > The deliberate underleverage is a feature, not a flaw. → The deliberate underleverage is intentional.
 
@@ -128,11 +158,11 @@ Each tell appears once, with its instance-form and any density threshold folded 
 
 **B6 — False ranges.** "from X to Y" where X and Y aren't on a meaningful scale ("from the singularity of the Big Bang to the enigmatic dance of dark matter"). **Fix:** just list the things.
 
-**B7 — Elegant variation (synonym cycling).** Repetition-penalty artifact: protagonist → main character → central figure → hero across consecutive sentences. **Fix:** reuse the plain word, or restructure into one sentence.
+**B7 — Elegant variation (synonym + noun-phrase cycling).** Repetition-penalty artifact at two levels: word-level (protagonist → main character → central figure → hero) and noun-phrase-level, where the same referent rotates through ever-more-elaborate descriptions ("the artist" → "the non-conformist painter" → "the visionary creator"). **Fix:** pick the clearest term and repeat it — humans repeat words naturally.
 
 **B8 — Frame-then-pivot cadence.** "On paper X. But in practice Y." / "In theory X. In reality Y." / "At first glance X. On closer look Y." AI's favourite manufactured-insight move; the pivot usually restates the same point. **Fix:** one such pivot per document, maximum.
 
-**B9 — Tidy summary endings, slogans, and lesson-closers.** Three overlapping moves: (1) every paragraph closes with a one-sentence restatement that ties a bow ("That's what makes the firm unusual"); (2) short aphoristic sentences sitting alone for rhetorical punctuation ("Scarcity is the school." / "The difference is structural."); (3) meta-closers ("The lesson for practitioners is…", "What this tells us is…", "This matters because…"). **Fix:** ≥30% of paragraphs should end without a bow; fold slogans into surrounding prose or drop them; cut meta-closers and make the point directly (or cut the paragraph).
+**B9 — Tidy summary endings, slogans, lesson-closers, and hooks.** Overlapping moves: (1) every paragraph closes with a one-sentence restatement that ties a bow ("That's what makes the firm unusual"); (2) short aphoristic sentences sitting alone for rhetorical punctuation ("Scarcity is the school." / "The difference is structural."); (3) meta-closers ("The lesson for practitioners is…", "What this tells us is…", "This matters because…"); (4) **"Whether…" range-closers** that restate the paragraph's scope as a recap ("Whether you…", "Whether they…", "Whether it's…" — e.g. "Whether you prefer fine dining or street food, the city has something for everyone"); (5) **infomercial hooks** — one-line dramatic questions in LinkedIn cadence ("The catch?", "The kicker?", "The twist?", "Here's the thing.", "Here's what nobody tells you:", "The brutal truth?", "Sound familiar?", "Want to know the best part?"). **Fix:** ≥30% of paragraphs should end without a bow; fold slogans into surrounding prose or drop them; cut meta-closers, cut the closing "whether" sentence, and delete the hook line — make the point directly, ending on the strongest specific point rather than a hedge that gestures at the range. And **don't close every causal chain**: AI over-explains; trust the reader to make the last inference.
 
 **B10 — Stacked declaratives and length monotony.** Three or four short parallel-subject sentences manufacturing authority ("The dividend is nominal. The dividend has never been raised. The dividend is symbolic."), and the broader pattern of every sentence landing at 18–25 words. **Fix:** combine into one sentence with subordinate clauses, or break the rhythm with a contrast; interleave a sub-10-word sentence and a 30+ word one. (Enforced numerically by battery #1–3 / tell D2.)
 
@@ -150,6 +180,8 @@ Each tell appears once, with its instance-form and any density threshold folded 
 
 **B15 — Opening-word repetition.** Two sentences starting "The"/"This" is fine; four in a row is a tell. **Fix:** vary openers — lead with a subject, a subordinate clause, a verb, or a fragment.
 
+**B16 — Treadmill (restatement density).** A paragraph where sentences 2–N paraphrase sentence 1 without adding a fact, example, or concession — the prose circles instead of advancing. Tells: mid-paragraph markers "In other words,", "Put simply,", "Essentially,", "To put it another way,", "That is to say,". **Fix:** run the "what's actually new here?" test on each sentence; cut any that only re-says the prior one. A paragraph that loses 60% of its words and reads better is the right outcome.
+
 ## Layer C — Lexical and surface
 
 **C1 — AI vocabulary (frequency tell).** *Surface list:* additionally, align with, crucial, delve, emphasizing, enduring, enhance, fostering, garner, highlight (v), interplay, intricate, key (adj), landscape (abstract), pivotal, showcase, tapestry, testament, underscore (v), valuable, vibrant. *Analytical/business sub-list:* textbook (adj), real lever, free lunch, release valve, structural headwind, dry powder, optionality, on paper, in practice, in the short/long run, at its core, at the margin, materially, asymmetries, dynamics, posture. Any one is fine; three or four in a memo is the tell — they signal "I'm being rigorous" without doing the work.
@@ -162,7 +194,7 @@ Each tell appears once, with its instance-form and any density threshold folded 
 
 **C5 — Em-dash (strict zero — HARD gate, full + light).** AI overuses em dashes (—) to mimic punchy sales writing. **Fix:** replace with a comma, period, or subordinate clause. Target 0. For long professional prose (1000+ words), ≤1 is tolerable only if grammatically irreplaceable.
 
-**C6 — Other surface formatting tells.** Curly quotes (" ") → straight ("). Mechanical boldface of phrases → remove. Inline-header vertical lists (**User Experience:** …) → fold into prose. Title Case In Headings → sentence case. Emojis decorating headings/bullets → remove.
+**C6 — Other surface formatting tells.** Curly quotes (" ") → straight ("). Mechanical boldface of phrases → remove. **Erratic inline bolding** — 1–4-word bold spans sprinkled mid-paragraph with no consistent category (sometimes a noun, sometimes an adjective) → strip all of it except glossary terms and UI labels; if something deserves emphasis, sentence structure should provide it. Inline-header vertical lists (**User Experience:** …) → fold into prose. Title Case In Headings → sentence case. Emojis decorating headings/bullets → remove.
 
 **C7 — Filler phrases.** "In order to achieve this goal" → "To achieve this"; "Due to the fact that" → "Because"; "At this point in time" → "Now"; "has the ability to" → "can"; "It is important to note that the data shows" → "The data shows".
 
@@ -204,6 +236,17 @@ The study isolated three moves that reliably read human — apply them because t
 - **Subjective stance markers.** First-person epistemic framing: "my reading is", "I'd argue", "what strikes me", "what I find genuinely difficult". Open interpretive paragraphs with one.
 - **Earned idiom.** Non-literal, relatable phrasing that does analytical work: "winner's curse", "burning cash", "justification written after the decision", "luck dressed up as judgment". The mechanism is unpredictability of phrasing, not sophistication — and decorative idiom (C9) is still a tell.
 - **Technical-broad balance.** State a figure *and* tie it to its wider meaning in the same breath: "a 52% premium… arguably says more about how management envisages the future than about anything in the company's record." Never let a number sit in a sentence that only reports it.
+
+## Know your own fingerprint (this skill usually runs under Claude)
+
+You are usually editing Claude's own output, so front-weight Claude's signature cluster — the tells most likely present and least likely to feel wrong from the inside (per humanink's model-fingerprint work; treat as where-to-look-first, not a classifier, since models converge and evolve):
+
+- **Stacked hedging** ("could", "potentially", "possibly", "might" piled up) — humanink calls the hedging cluster Claude's primary signal. (In `light` mode de-hedge nothing — see D1 — but still flag genuine *double*-hedges.)
+- **"It is worth noting that" / "It is important to note that"** filler hedges.
+- **AI-vocabulary connectives** — "Additionally", "Furthermore" as sentence openers (C8).
+- **Long, qualified, mid-length sentences** rather than ChatGPT-style bold/bullet formatting.
+
+For contrast: ChatGPT skews to formatting (bold, emoji, inline-header lists, "Let's dive in"); Gemini to content inflation (promotional language, "In today's world", generic upbeat conclusions). Knowing the source narrows the search.
 
 ---
 
@@ -249,6 +292,8 @@ A pass that strips human signals makes text *more* detectable. Do not sand these
 | Idiosyncratic / loose domain vocab — don't normalize to textbook | don't remove | Over-correction converges on the "average voice" classifiers are trained on |
 | Consistent non-US spelling (organise, colour) | 0 inconsistencies introduced | Inconsistency is the tell, not the variant |
 | Occasional sentence-initial And/But, fragment, real comma splice | allow, don't auto-correct | Human syntactic fingerprints |
+| Specific, hard-to-fabricate detail — a real address, an odd quote, an exact figure, a cited specific | don't round off or generalize | LLMs round to the generic; humans hoard specifics. A sentence with `confirmed` + a real citation is evidence of a real analyst |
+| Mixed feelings, genuine asides, self-corrections | allow, don't resolve | "Mostly right but it bothers me" reads human; AI defaults to clean takes |
 
 ---
 
@@ -256,9 +301,11 @@ A pass that strips human signals makes text *more* detectable. Do not sand these
 
 A single pass isn't enough. Five passes, in order — architectural rewrites change the sentences, so don't fix sentences first.
 
-**Pass 1 — Architecture (Layer A).** Audit document shape before touching prose: source-review framing (A1), patterned issue paragraphs / list uniformity (A2), roadmap sentences (A3), formulaic challenge sections (A4), framing-tissue concentration (A5). Rewrite, then move on.
+**First, decide patch vs. rebuild.** If tells saturate the draft — 5+ banlist/vocab hits across 3+ categories, plus uniform sentence and paragraph length — patching individual phrases won't fix it; the structure itself is AI-generated. State the core point in one sentence and rebuild from there. Patch only when the bones are sound.
 
-**Pass 2 — Sentence and rhetoric (Layer B).** Slogans and tidy closers (B9), clever inversions (B11), performative similes (B12), tidy concessions (B13), stacked declaratives (B10), rule-of-three (B5), frame-then-pivot (B8), negative parallelism (B4), colon-restatement (B14).
+**Pass 1 — Architecture (Layer A).** Audit document shape before touching prose: source-review framing (A1), patterned issue paragraphs / list uniformity (A2), roadmap sentences (A3), formulaic challenge sections (A4), framing-tissue concentration (A5), reshuffleable paragraphs (A6). Rewrite, then move on.
+
+**Pass 2 — Sentence and rhetoric (Layer B).** Slogans, closers, and hooks (B9), treadmill/restatement (B16), clever inversions (B11), performative similes (B12), tidy concessions (B13), stacked declaratives (B10), rule-of-three (B5), frame-then-pivot (B8), negative parallelism (B4), colon-restatement (B14).
 
 **Pass 3 — Lexical and surface (Layer C).** AI vocabulary (C1) and the hard banlist (C2), categorical pronouncements (C3), nominalizations/compounds (C4), filler (C7), copula avoidance (B3), signposts/connectives (C8), em dashes (C5), curly quotes / boldface / emojis (C6).
 
