@@ -330,7 +330,7 @@ def check_tricolon(text: str, total_words: int) -> tuple[str, str, bool]:
 
 
 def check_negation_reversal(text: str, total_words: int) -> tuple[str, str, bool]:
-    """#10 — Negation-reversal <= 1/500w (soft)"""
+    """#10 — Negation-reversal <= 1/500w (HARD)"""
     count = len(NEGATION_REVERSAL_RE.findall(text))
     allowed = max(1, total_words / 500)
     return (str(count), f"<={allowed:.1f}/500w-scaled", count <= allowed)
@@ -472,7 +472,7 @@ def score(text: str, mode: str) -> int:
 
         # #10 negation-reversal
         nr_val, nr_thresh, nr_ok = check_negation_reversal(prose, total_words)
-        record("negation-reversal", nr_val, nr_thresh, "soft", nr_ok)
+        record("negation-reversal", nr_val, nr_thresh, "HARD", nr_ok)
 
         # #11 colon-restatement — MODEL-JUDGMENT, skip
         lines.append(
@@ -504,7 +504,7 @@ def score(text: str, mode: str) -> int:
     else:
         # light mode: skip #9-#14 except already done #6-#8
         skip("tricolon-density", "soft")
-        skip("negation-reversal", "soft")
+        skip("negation-reversal", "HARD")
         lines.append(
             f"= {'colon-restatement-#11':<38} | {'SKIPPED (light)':<30} | {'—':<28} | GATE({'soft':<4}) | SKIPPED (light)"
         )

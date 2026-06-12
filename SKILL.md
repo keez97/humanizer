@@ -1,6 +1,6 @@
 ---
 name: humanizer
-version: 2.7.2
+version: 2.7.3
 description: |
   Remove signs of AI-generated writing from text — descriptive prose (heritage
   puffery, inflated symbolism, promotional language) and analytical/argumentative
@@ -275,7 +275,7 @@ python3 /Users/karimatari/.claude/skills/humanizer/score.py <draft> --mode <full
 | 7 | Em dashes | 0 | HARD | script (full+light) |
 | 8 | Signpost density | ≤1/300w, 0 bad openers | HARD | script (full+light) |
 | 9 | Tricolon density | ≤1/200w | soft | script |
-| 10 | Negation-reversal | ≤1/500w | soft | script |
+| 10 | Negation-reversal (incl. cross-sentence "X isn't A. It's B.") | ≤1/500w | HARD | script |
 | 11 | Colon-restatement | ≤1/600w | soft | **model-judgment** |
 | 12 | Hedge density | ≤3/200w, no double-hedges | soft | script |
 | 13 | Perplexity-anchor coverage | ≥1 per paragraph | soft | **model-judgment** |

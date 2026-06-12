@@ -2,7 +2,7 @@
 
 A Claude Code skill that removes signs of AI-generated writing from text, making it sound more natural and human.
 
-**Current version: 2.7.2.** The canonical rule set is in `SKILL.md` — this README is an orientation guide only. If this file and `SKILL.md` conflict, `SKILL.md` wins.
+**Current version: 2.7.3.** The canonical rule set is in `SKILL.md` — this README is an orientation guide only. If this file and `SKILL.md` conflict, `SKILL.md` wins.
 
 ## Installation
 
@@ -102,6 +102,7 @@ The deduplicated tells live in four fix-order layers. Full definitions, before/a
 
 ## Version history
 
+- **2.7.3** — Negation-reversal (#10) promoted to a **HARD** gate in `full` mode — definitional negation ("X, not Y" / "X isn't A. It's B.") can no longer pass silently. Single legitimate uses are still fine (threshold ≤1/500w); denser use blocks. `light` mode still skips it, so the pre-commit gate is unaffected.
 - **2.7.2** — `score.py` negation-reversal check (#10) now catches the cross-sentence definitional-negation form ("X isn't a lapse. It's B." split across a period), which the inline-only regex was blind to. Tight article list keeps false positives at zero on ordinary negations. Still a soft gate.
 - **2.7.1** — Patterns harvested from a live GPTZero 4.6b adversarial test: B17 (formal phrasing of a personal stance → "Impersonal Tone"), B18 (smooth multi-clause sentences → "Mechanical Transitions"), and B4 escalated for titles/headings ("X, Not Y" → "Contrast Phrasing"). Honest Limits gains a second live confirmation: a clean battery-passing essay scored 100% AI with 7 sentences flagged human — panel and verdict are decoupled.
 - **2.7.0** — Capability harvest from peer OSS humanizer skills (blader, conorbronsdon/avoid-ai-writing, Aboudjem/humanizer-skill, sirambrosio/humanink), incorporated faithfully and verified against each source. New tells (A6, B16, + enrichments to B1/B4/B7/B9/C6), `detect` mode, optional voice calibration, and cross-cutting guardrails (cluster gate, quoted-source exemption, patch-vs-rebuild, Claude fingerprint). Battery and modes' core contract unchanged.
