@@ -1,6 +1,6 @@
 ---
 name: humanizer
-version: 2.7.0
+version: 2.7.1
 description: |
   Remove signs of AI-generated writing from text — descriptive prose (heritage
   puffery, inflated symbolism, promotional language) and analytical/argumentative
@@ -150,7 +150,7 @@ Each tell appears once, with its instance-form and any density threshold folded 
 
 **B3 — Copula avoidance.** *Watch:* serves as / stands as / represents / boasts / features / offers, used to dodge "is/are/has." **Fix:** restore the copula. "Gallery 825 is the exhibition space" beats "serves as."
 
-**B4 — Negative parallelism and definitional negation.** "Not just X but Y", "It's not merely a song, it's a statement", "it does more than X; it Y", and the analytical cousin "X, not Y" / "a feature, not a flaw" / "X rather than Y". AI manufactures precision by defining a thing against what it isn't; the contrast usually adds nothing. **Fix:** cut the negation, say what it is. *Density:* over ~500 words the **second** instance is the tell, not the first. ⚠ This is the trap that sneaks in while "adding voice" — it *feels* emphatic and human, so audit every voice edit for it.
+**B4 — Negative parallelism and definitional negation.** "Not just X but Y", "It's not merely a song, it's a statement", "it does more than X; it Y", and the analytical cousin "X, not Y" / "a feature, not a flaw" / "X rather than Y". AI manufactures precision by defining a thing against what it isn't; the contrast usually adds nothing. **Fix:** cut the negation, say what it is. *Density:* over ~500 words the **second** instance is the tell, not the first. **Worst in titles, headings, and the first or last sentence** — the most prominent positions. The "X, Not Y" title format ("An Argument, Not a Discovery") is a cliché in its own right and leads with the tell; never title or open with one. Trained detectors name this directly as "Contrast Phrasing" / "negative parallel construction" at the document level. ⚠ This is the trap that sneaks in while "adding voice" — it *feels* emphatic and human, so audit every voice edit for it.
 
 > The deliberate underleverage is a feature, not a flaw. → The deliberate underleverage is intentional.
 
@@ -181,6 +181,10 @@ Each tell appears once, with its instance-form and any density threshold folded 
 **B15 — Opening-word repetition.** Two sentences starting "The"/"This" is fine; four in a row is a tell. **Fix:** vary openers — lead with a subject, a subordinate clause, a verb, or a fragment.
 
 **B16 — Treadmill (restatement density).** A paragraph where sentences 2–N paraphrase sentence 1 without adding a fact, example, or concession — the prose circles instead of advancing. Tells: mid-paragraph markers "In other words,", "Put simply,", "Essentially,", "To put it another way,", "That is to say,". **Fix:** run the "what's actually new here?" test on each sentence; cut any that only re-says the prior one. A paragraph that loses 60% of its words and reads better is the right outcome.
+
+**B17 — Formal phrasing of a personal stance.** A subjective claim delivered in formal, literary, or indirect register reads as impersonal *even when the "I" is present*. "I find his unease more clarifying than Nehru's confidence" / "I'll stand by the smaller claim" / "I notice I've half-talked myself into…" carry first-person grammar but bookish phrasing, and trained detectors flag them as "Impersonal Tone" / "Robotic Formality." The fix isn't to drop the stance — it's to say it the plain way you'd say it out loud. **Fix:** "Ambedkar thought it couldn't last. I think he was right." beats "I find his unease more clarifying than Nehru's confidence." A stance marker (see § Human signals) only reads human when the phrasing around it is direct, not literary. This is the most common way "adding voice" backfires: the voice is formal, so the detector still reads it as machine.
+
+**B18 — Smooth multi-clause sentences.** Beyond the named connectives (C8), any sentence that stitches several clauses into one smooth subordinated whole reads AI — "Mechanical Transitions" / "Technical Jargon" / "Formulaic Flow." Example: "When the states were reorganized in 1956, a step Nehru resisted because he feared it would crack the country open, the opposite happened." The polish is the tell, not the length. **Fix:** favor simple subject-verb-object sentences; break a three-clause sentence into two or three. The sentences trained detectors mark *human* are short, direct, single-claused: "Tagore distrusted the nation and then wrote its anthem." (Related to D2 burstiness, but the precise signal is clause complexity, not just length variance.)
 
 ## Layer C — Lexical and surface
 
@@ -233,7 +237,7 @@ These target the axis trained detectors score on. **Read § Honest Limits before
 
 The study isolated three moves that reliably read human — apply them because they make the writing better:
 
-- **Subjective stance markers.** First-person epistemic framing: "my reading is", "I'd argue", "what strikes me", "what I find genuinely difficult". Open interpretive paragraphs with one.
+- **Subjective stance markers.** First-person epistemic framing: "my reading is", "I'd argue", "what strikes me", "what I find genuinely difficult". Open interpretive paragraphs with one. **But phrasing matters more than the pronoun** — a stance in formal/literary register still reads impersonal (see B17). Say it the plain way you'd say it aloud.
 - **Earned idiom.** Non-literal, relatable phrasing that does analytical work: "winner's curse", "burning cash", "justification written after the decision", "luck dressed up as judgment". The mechanism is unpredictability of phrasing, not sophistication — and decorative idiom (C9) is still a tell.
 - **Technical-broad balance.** State a figure *and* tie it to its wider meaning in the same breath: "a 52% premium… arguably says more about how management envisages the future than about anything in the company's record." Never let a number sit in a sentence that only reports it.
 
@@ -348,6 +352,8 @@ Added 2026-06-12 after a controlled study: six rewrites across two genres (a fin
 7. **The voice trap.** Reaching for "voice" smuggles in new tells — the negation-reversal "X is not A, it is B" (B4) feels emphatic and human, so it creeps in, but it is a named AI signature. Audit every voice edit against Layers A–C: a stance/idiom gain that adds a negation-reversal, a colon-definition, or a formal connective is a net loss.
 
 > **Integrity note.** This layer is for understanding and honestly reporting detector behavior, and for writing that is genuinely more human. It is not a guarantee-evasion tool. On graded or attested work, "make AI output pass a detector" is an academic-integrity problem — surface it; write the draft yourself and use the model as an editor (human-drafted → AI-tightened survives; AI-drafted → human-flavored does not); keep process artifacts. Don't iterate rewrites against the verdict — six data points say it doesn't move.
+
+**Second live confirmation (2026-06-12).** A clean, battery-passing 960-word essay (CV 0.63, first-person stance, concrete named cases, zero banlist/em-dashes) was scanned on GPTZero 4.6b: **100% AI, 0% human** — even though the panel marked *seven* sentences human ("Engaging Sentence Variety," a simple direct paradox). The named AI drivers were the skill's own tells: "Contrast Phrasing" (B4 — the title was "X, Not Y"), "Impersonal Tone" (B17 — formal phrasing of a personal stance), "Mechanical Transitions" (B18 — smooth multi-clause sentences). B17 and B18 were *added* in response to this scan; they make the prose better and turn more sentences green, but the run is the proof that **more patterns move the panel, not the document verdict.** The panel and the verdict are decoupled; pattern-completeness is not the bottleneck — authorship direction is.
 
 ---
 
