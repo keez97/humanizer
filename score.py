@@ -91,9 +91,19 @@ CONTRACTION_RE = re.compile(
 )
 
 NEGATION_REVERSAL_RE = re.compile(
+    # --- inline forms ---
     r"\bnot just .{1,60} but\b"
     r"|\b\w[\w\s]{0,30} is not .{1,60},? it is\b"
-    r"|\b\w[\w\s]{0,30} are not .{1,60},? they are\b",
+    r"|\b\w[\w\s]{0,30} are not .{1,60},? they are\b"
+    # --- cross-sentence predicate-nominal reversal (B4): ---
+    #   "That isn't a LAPSE. It might be B."  /  "That's not a footnote. It's B."
+    #   negate "a/the/just <noun>", end the sentence, then a pronoun re-asserts the positive.
+    #   Article list kept tight (a|an|the|just|merely|simply|only) to avoid firing on
+    #   ordinary "I don't really know. It's complicated." style sequences.
+    r"|(?:n't|\bnot)\s+(?:a|an|the|just|merely|simply|only)\b[^.!?]{0,60}[.!?]+\s+"
+    r"(?:it|that|this|they|instead|rather)\b(?:'s|'re|\s+(?:is|are|was|were|might|may|should))"
+    # --- cross-sentence "X doesn't VERB like A. It VERBs like B." ---
+    r"|(?:n't|\bnot)\s+\w+\s+like\b[^.!?]{0,50}[.!?]+\s+(?:it|they)\b[^.!?]{0,25}\blike\b",
     re.IGNORECASE,
 )
 

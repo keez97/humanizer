@@ -1,6 +1,6 @@
 ---
 name: humanizer
-version: 2.7.1
+version: 2.7.2
 description: |
   Remove signs of AI-generated writing from text — descriptive prose (heritage
   puffery, inflated symbolism, promotional language) and analytical/argumentative
