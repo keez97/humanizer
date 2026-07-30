@@ -1,6 +1,6 @@
 ---
 name: humanizer
-version: 2.8.0
+version: 2.9.0
 description: |
   Remove signs of AI-generated writing from text — descriptive prose (heritage
   puffery, inflated symbolism, promotional language) and analytical/argumentative
@@ -8,7 +8,7 @@ description: |
   tidy summary endings, stacked declaratives). Includes an era-tiered vocabulary
   model, a false-positive layer, a statistical-distribution layer, mode tiering
   (full/light/off/detect), a self-scoring script, optional writing-sample voice
-  calibration, and an honest detection-resistance layer.
+  calibration, a no-fabrication guard, and an honest detection-resistance layer.
 allowed-tools:
   - Read
   - Write
@@ -89,6 +89,10 @@ If the text is clean, say so. Pair with `score.py` for the mechanical half.
 5. **Preserve alibis** (see § Alibis). Contractions, occasional awkward-but-correct phrasing, loose domain idiom, consistent non-US spelling, sentence-initial And/But — these are human fingerprints. Do not sand them away.
 6. **Flag clusters, not isolated tells.** A single em-dash, one tricolon, or one "however" means nothing — co-occurrence is the signal. Em-dash + rule-of-three + a banlist word + a tidy "In conclusion" in the same passage is a confession; any one alone, in prose that is otherwise specific and stance-bearing, is not. Require a cluster before rewriting, or you over-edit human texture toward the average voice classifiers are trained on.
 7. **Never humanize quoted or illustrative text.** Quoted source material, block quotes, cited passages, and text explicitly marked as an example are off-limits — flag them, don't rewrite them. Only edit the author's own prose. (`score.py` already strips code blocks, tables, and headings; this is the prose-judgment version for citations.)
+8. **Never invent a fact. This one overrides everything else.** The rewrite must not contain a fact, name, number, date, quote, or citation absent from the source. Replacing a vague claim with a specific one is allowed *only* when the specific comes from the source or from the writer. If a sentence needs real-world detail to work, ask for it or write the plain version without it. **A fabrication is a defect even when it reads more human than the vague original** — especially then, because that is exactly when it is tempting.
+   - Opinions, stance, and reactions are voice, not facts. § Soul lets you add those. It never licenses a new factual claim.
+   - **This rule is in direct tension with D4**, which tells you to add a concrete anchor to any paragraph that lacks one. When a paragraph has no real specific available, the answer is to ask the writer or leave it abstract and flag it. It is *not* to manufacture a plausible number. An invented statistic with a fabricated citation is the single worst output this skill can produce: it reads human, passes the battery, and is a lie.
+   - In fiction, invented detail is the job. This rule governs everything else.
 
 ---
 
@@ -143,6 +147,16 @@ Each tell appears once, with its instance-form and any density threshold folded 
 
 **A6 — Reshuffleable paragraphs.** AI generates parallel blocks instead of an unfolding argument; each paragraph is a self-contained mini-thesis with its own setup and resolution. *Test:* can you swap ¶2 and ¶4 without breaking the piece? If yes, it's AI. **Fix:** make ¶N+1 depend on something concrete in ¶N — a reference, a callback, a "this is why" link. If two paragraphs are interchangeable, merge them or cut one.
 
+**A7 — Fragmented headers.** A heading followed by a one-line paragraph that restates the heading before the real content starts. It's a rhetorical throat-clear: the model warms up instead of beginning. **Fix:** delete the warm-up line and let the heading hand straight off to the substance.
+
+> ## Performance
+> Speed matters.
+> When users hit a slow page, they leave.
+
+→ `## Performance` followed directly by "When users hit a slow page, they leave."
+
+**A8 — Diff-anchored writing.** Prose that narrates a *change* rather than describing the thing as it stands: "This function was added to replace the previous approach of iterating through all items, which caused O(n²) performance." The reader is left reconstructing a history they never saw. Unless the document is version-scoped by nature (changelogs, release notes, migration guides), it should read coherently to someone who has never seen the earlier version. **Fix:** describe the current state and its reason, dropping the before/after frame. "This function uses a hash map for O(1) lookups, avoiding the O(n²) cost of naive iteration." Especially common in documentation, code comments, and READMEs written by a model that was just handed a diff.
+
 ## Layer B — Sentence and rhetoric
 
 **B1 — Significance / legacy inflation (incl. symbolic gloss).** *Watch:* stands/serves as, is a testament/reminder, a pivotal/crucial/key moment, underscores its importance, reflects broader, marking a shift, evolving landscape, focal point, indelible mark, deeply rooted. A narrower cousin is the **symbolic gloss** — telling the reader what a fact *means* rather than letting it stand: "represents", "symbolizes", "speaks to", "embodies", "reflects broader anxieties about". AI puffs importance by asserting that arbitrary details represent a broader trend. **Fix:** state what the thing is and does; cut the gloss and let the fact carry it ("The factory closed in 2009. Three hundred jobs."). ⚠ **Don't over-apply to plain superlatives.** Definitive statements — "one of the best", "is the only", "was the first" — are empirically *more* common in human writing than AI (Reinhart et al., PNAS). The tell is unearned significance asserted about a routine fact, not confidence itself. A writer who commits to "this was the first" is showing a human signal; strip it and you push the prose toward the hedged, non-committal register that reads machine.
@@ -171,13 +185,15 @@ AI manufactures precision by defining a thing against what it isn't; the contras
 
 **B8 — Frame-then-pivot cadence.** "On paper X. But in practice Y." / "In theory X. In reality Y." / "At first glance X. On closer look Y." AI's favourite manufactured-insight move; the pivot usually restates the same point. **Fix:** one such pivot per document, maximum.
 
-**B9 — Tidy summary endings, slogans, lesson-closers, and hooks.** Overlapping moves: (1) every paragraph closes with a one-sentence restatement that ties a bow ("That's what makes the firm unusual"); (2) short aphoristic sentences sitting alone for rhetorical punctuation ("Scarcity is the school." / "The difference is structural."); (3) meta-closers ("The lesson for practitioners is…", "What this tells us is…", "This matters because…"); (4) **"Whether…" range-closers** that restate the paragraph's scope as a recap ("Whether you…", "Whether they…", "Whether it's…" — e.g. "Whether you prefer fine dining or street food, the city has something for everyone"); (5) **infomercial hooks** — one-line dramatic questions in LinkedIn cadence ("The catch?", "The kicker?", "The twist?", "Here's the thing.", "Here's what nobody tells you:", "The brutal truth?", "Sound familiar?", "Want to know the best part?"). **Fix:** ≥30% of paragraphs should end without a bow; fold slogans into surrounding prose or drop them; cut meta-closers, cut the closing "whether" sentence, and delete the hook line — make the point directly, ending on the strongest specific point rather than a hedge that gestures at the range. And **don't close every causal chain**: AI over-explains; trust the reader to make the last inference.
+**B9 — Tidy summary endings, slogans, lesson-closers, and hooks.** Overlapping moves: (1) every paragraph closes with a one-sentence restatement that ties a bow ("That's what makes the firm unusual"); (2) short aphoristic sentences sitting alone for rhetorical punctuation ("Scarcity is the school." / "The difference is structural."); (3) meta-closers ("The lesson for practitioners is…", "What this tells us is…", "This matters because…"); (4) **"Whether…" range-closers** that restate the paragraph's scope as a recap ("Whether you…", "Whether they…", "Whether it's…" — e.g. "Whether you prefer fine dining or street food, the city has something for everyone"); (5) **infomercial hooks** — one-line dramatic questions in LinkedIn cadence ("The catch?", "The kicker?", "The twist?", "Here's the thing.", "Here's what nobody tells you:", "The brutal truth?", "Sound familiar?", "Want to know the best part?"); (6) **fake-candid openers** — a theatrical pause-and-reveal that manufactures intimacy before an ordinary point ("Honestly?", "Look,", "The thing is,", "Let's be honest", "Real talk"). The tell is the one-word question or aside followed by the "real" answer; someone actually being honest just says the thing. "Is it worth the price? Honestly? It depends on how often you'll use it." → "Whether it's worth the price depends on how often you'll use it." **Fix:** ≥30% of paragraphs should end without a bow; fold slogans into surrounding prose or drop them; cut meta-closers, cut the closing "whether" sentence, and delete the hook line — make the point directly, ending on the strongest specific point rather than a hedge that gestures at the range. And **don't close every causal chain**: AI over-explains; trust the reader to make the last inference.
 
 **B10 — Stacked declaratives and length monotony.** Three or four short parallel-subject sentences manufacturing authority ("The dividend is nominal. The dividend has never been raised. The dividend is symbolic."), and the broader pattern of every sentence landing at 18–25 words. **Fix:** combine into one sentence with subordinate clauses, or break the rhythm with a contrast; interleave a sub-10-word sentence and a 30+ word one. (Enforced numerically by battery #1–3 / tell D2.)
 
 > The dividend is nominal. Has never been raised. Symbolic. → The dividend is nominal and has never been raised, which makes it more a discipline signal than a real return mechanism.
 
-**B11 — Clever inversions and chiasmus.** Rhetorically symmetric constructions where the second half mirrors the first: "The question of who wins becomes the question of who is allowed to win." / "More an X about Y than a Y about X." They read polished *because* they are — formal-rhetoric moves AI produces fluently. **Fix:** restate plainly; ≤1 per document.
+**B11 — Clever inversions, chiasmus, and aphorism formulas.** Two related moves. (1) **Chiasmus** — rhetorically symmetric constructions where the second half mirrors the first: "The question of who wins becomes the question of who is allowed to win." / "More an X about Y than a Y about X." (2) **Aphorism formulas** — templates that inflate an ordinary claim into something that sounds quotable without adding precision. *Watch:* "X is the Y of Z", "the language of…", "the currency of…", "the architecture of…", "X becomes a trap", "X is not a tool but a mirror". Both read polished *because* they are: formal-rhetoric moves AI produces fluently. **Fix:** restate the concrete claim the formula is gesturing at; ≤1 per document.
+
+> Symmetry is the language of trust. Efficiency becomes a trap when teams forget the human layer. → Symmetric layouts often feel more predictable to users. Teams can over-optimize workflows and miss how people actually use them.
 
 **B12 — Performative similes.** Ordinary observations dressed in literary similes that don't earn their keep: "It has the shape of every founder story ever told." **Fix:** cut, or replace with a flat claim. ("…has a survivorship problem.")
 
@@ -258,6 +274,8 @@ Note the interaction with § Know your own fingerprint: stacked hedging is Claud
 **D3 — Paragraph-length variance.** Uniform ~80–110-word blocks read AI; human paragraphing is lumpy. **Target:** word-counts span ≥3× per ~800 words; no 3 consecutive paragraphs within 15 words; ≥1 paragraph of ≤2 sentences per ~600 words. Don't trim a long paragraph just because it stands out. (Battery #4–5.)
 
 **D4 — Perplexity / specificity anchors.** Paragraphs of only abstract claims score predictably (= AI). **Fix:** ≥1 concrete anchor — a number, named example, date, proper noun, or unexpected-but-apt verb — per ~80–100 words. Specificity is the primary perplexity-raiser, not syntactic noise. Flag any zero-anchor paragraph as "too smooth." (Battery #13, model-judgment.)
+
+> ⚠ **The anchor must be real.** This rule is the most likely place in the whole skill to produce a fabrication, because it asks for a specific and the model can always supply a plausible one. If the source has no number, name, or date to anchor with, ask the writer for one or leave the paragraph abstract and flag it. Never invent the anchor. See Governing Principle 8.
 
 **D5 — Framework-mapping enumeration.** Reciting all N components of a named framework in canonical order, one clause each, signals the model walking through training data. **Fix:** address ≤2 components explicitly, integrated into prose; let the rest stay implicit.
 
@@ -388,13 +406,16 @@ A single pass isn't enough. Five passes, in order — architectural rewrites cha
 
 **First, decide patch vs. rebuild.** If tells saturate the draft — 5+ banlist/vocab hits across 3+ categories, plus uniform sentence and paragraph length — patching individual phrases won't fix it; the structure itself is AI-generated. State the core point in one sentence and rebuild from there. Patch only when the bones are sound.
 
-**Pass 1 — Architecture (Layer A).** Audit document shape before touching prose: source-review framing (A1), patterned issue paragraphs / list uniformity (A2), roadmap sentences (A3), formulaic challenge sections (A4), framing-tissue concentration (A5), reshuffleable paragraphs (A6). Rewrite, then move on.
+**Pass 1 — Architecture (Layer A).** Audit document shape before touching prose: source-review framing (A1), patterned issue paragraphs / list uniformity (A2), roadmap sentences (A3), formulaic challenge sections (A4), framing-tissue concentration (A5), reshuffleable paragraphs (A6), fragmented headers (A7), diff-anchored framing (A8). Rewrite, then move on.
 
 **Pass 2 — Sentence and rhetoric (Layer B).** Slogans, closers, and hooks (B9), treadmill/restatement (B16), clever inversions (B11), performative similes (B12), tidy concessions (B13), stacked declaratives (B10), rule-of-three (B5), frame-then-pivot (B8), negative parallelism (B4), colon-restatement (B14).
 
 **Pass 3 — Lexical and surface (Layer C).** AI vocabulary (C1) and the hard banlist (C2), categorical pronouncements (C3), nominalizations/compounds (C4), filler (C7), copula avoidance (B3), signposts/connectives (C8), em dashes (C5), curly quotes / boldface / emojis (C6).
 
-**Pass 4 — Audit.** Ask yourself: "What makes the below so obviously AI generated?" Answer in 3–5 specific bullets, quoting offending passages — "the third paragraph closes with a chiasmus and the second opens with a slogan" beats "it sounds AI-ish." Then rewrite each.
+**Pass 4 — Audit.** Ask yourself two questions, and answer both before rewriting.
+
+1. *"What makes the below so obviously AI generated?"* Answer in 3–5 specific bullets, quoting offending passages — "the third paragraph closes with a chiasmus and the second opens with a slogan" beats "it sounds AI-ish." Then rewrite each.
+2. *"Does the rewrite state any fact, name, number, date, quote, or citation that isn't in the source?"* Answer explicitly, even when the answer is no. Any hit is a defect and gets reverted to the source's version or removed, regardless of how much better it reads. This is a separate question from question 1 on purpose: a fabricated specific is invisible to a style audit because it looks exactly like the thing the style audit is asking for.
 
 **Pass 5 — Read aloud.** Listen for sentence-length rhythm (D2), opening-word repetition (B15), and anything that doesn't sound like a person actually speaking. If a phrase makes you wince read aloud, it's probably AI-shaped even if it matches no specific rule.
 
@@ -408,9 +429,10 @@ Provide, in order:
 
 1. **Draft rewrite** (after Passes 1–3).
 2. **"What makes the below so obviously AI generated?"** — brief, passage-specific bullets with quotes (Pass 4).
-3. **Final rewrite** (after Passes 4–5).
-4. **"What I cut"** — concrete edits mapped to tell IDs where relevant, not a vague "removed AI phrases."
-5. **"What's left I'm watching"** — borderline phrases in the final version that would be the first targets on another pass. This is the most important section even when the document looks clean: naming the borderline phrases is what forces them caught later instead of slipping through. Skipping it causes the most common failure mode — declaring a document clean when two or three borderline phrases remain.
+3. **"Anything fabricated?"** — one line answering Pass 4's second question. State "nothing added" or list every invented specific and what it was reverted to. Never omit this line; a silent pass here is indistinguishable from a pass that never checked.
+4. **Final rewrite** (after Passes 4–5).
+5. **"What I cut"** — concrete edits mapped to tell IDs where relevant, not a vague "removed AI phrases."
+6. **"What's left I'm watching"** — borderline phrases in the final version that would be the first targets on another pass. This is the most important section even when the document looks clean: naming the borderline phrases is what forces them caught later instead of slipping through. Skipping it causes the most common failure mode — declaring a document clean when two or three borderline phrases remain.
 
 ---
 

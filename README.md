@@ -4,7 +4,7 @@ A Claude Code skill that strips the signs of AI-generated writing out of prose.
 
 Surface cleanup is the easy half. Anyone can delete em dashes and swap out `delve`. The tells that actually survive editing live in structure and cadence: paragraphs you could reorder without breaking the argument, colon-lead cascades, every sentence landing at 20 words, tidy summary endings that tie a bow. This skill is organized around fixing those first.
 
-**Current version: 2.8.0.** `SKILL.md` is the canonical rule set. If this README and `SKILL.md` disagree, `SKILL.md` wins.
+**Current version: 2.9.0.** `SKILL.md` is the canonical rule set. If this README and `SKILL.md` disagree, `SKILL.md` wins.
 
 ## What this is honest about
 
@@ -67,6 +67,16 @@ Fourteen checks. Sentence-length coefficient of variation, paragraph variance, v
 Ship gate: every HARD check passes and fewer than three soft checks fail. Two-pass cap. Looping a draft against the battery more than twice over-fits to the battery itself, which becomes its own signature.
 
 Two checks (colon-restatement and perplexity-anchor coverage) need judgment and are deliberately left to the model rather than faked in regex.
+
+## What changed in 2.9.0
+
+- **A no-fabrication rule, as governing principle 8.** The rewrite must not contain a fact, name, number, date, quote, or citation absent from the source, and a fabrication counts as a defect even when it reads better than the vague original. This closes a hole the skill itself opened: rule D4 tells the model to add a concrete anchor to any paragraph that lacks one, which is an open invitation to invent a plausible statistic. D4 now carries an explicit warning, and the audit pass asks a second, separate question about fabricated specifics. Separate on purpose, because an invented number is invisible to a style audit: it looks exactly like what the style audit asked for.
+- **A7, fragmented headers.** A heading followed by a line that just restates the heading before the real content starts.
+- **A8, diff-anchored writing.** Prose narrating a change instead of describing the thing as it stands. Common in docs and code comments written from a diff.
+- **B11 extended** with aphorism formulas: `X is the Y of Z`, `the language of`, `the currency of`, `X becomes a trap`.
+- **B9 extended** with fake-candid openers: `Honestly?`, `Look,`, `Real talk`, `Let's be honest`.
+
+Patterns A7, A8 and the two watch-lists were ported from [blader/humanizer](https://github.com/blader/humanizer) v2.9.x, as was the no-fabrication rule.
 
 ## What changed in 2.8.0
 
