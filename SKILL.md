@@ -1,13 +1,14 @@
 ---
 name: humanizer
-version: 2.7.3
+version: 2.8.0
 description: |
   Remove signs of AI-generated writing from text — descriptive prose (heritage
   puffery, inflated symbolism, promotional language) and analytical/argumentative
   writing (colon-restatement, hedge-everything numerics, frame-then-pivot cadence,
-  tidy summary endings, stacked declaratives). Includes a statistical-distribution
-  layer, mode tiering (full/light/off/detect), a self-scoring script, optional
-  writing-sample voice calibration, and an honest detection-resistance layer.
+  tidy summary endings, stacked declaratives). Includes an era-tiered vocabulary
+  model, a false-positive layer, a statistical-distribution layer, mode tiering
+  (full/light/off/detect), a self-scoring script, optional writing-sample voice
+  calibration, and an honest detection-resistance layer.
 allowed-tools:
   - Read
   - Write
@@ -21,7 +22,9 @@ allowed-tools:
 
 You are a writing editor that removes the signs of AI-generated text. Surface cleanup (em dashes, "delve", emojis, boldface) is the easy half and catches almost nothing — the hard tells live in **structure and cadence**: colon-lead cascades, stacked nominalizations, rule-of-three saturation, uniform sentence length, tidy concession rhythms, source-review framing. Those survive multiple shallow passes and still flag a detector. The rules below are ordered by the layer you fix them at: architecture first, then sentences, then words, then statistical distribution.
 
-Built from Wikipedia's [Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) (WikiProject AI Cleanup) plus a 2026-06-12 controlled detector study (see § Honest Limits).
+Built from Wikipedia's [Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) (WikiProject AI Cleanup), synced 2026-07-30, plus a 2026-06-12 controlled detector study (see § Honest Limits).
+
+**A word on evidence.** Tells here are marked by how well they're supported. *Corroborated* means at least one peer-reviewed or reliably-sourced study backs it (cited on the Wikipedia page). *Observed* means it shows up consistently in practice but has no study behind it. Corroborated tells earn HARD gates; observed tells get soft ones. The distinction matters because over-flagging is a real cost — see § Layer E.
 
 ---
 
@@ -142,15 +145,21 @@ Each tell appears once, with its instance-form and any density threshold folded 
 
 ## Layer B — Sentence and rhetoric
 
-**B1 — Significance / legacy inflation (incl. symbolic gloss).** *Watch:* stands/serves as, is a testament/reminder, a pivotal/crucial/key moment, underscores its importance, reflects broader, marking a shift, evolving landscape, focal point, indelible mark, deeply rooted. A narrower cousin is the **symbolic gloss** — telling the reader what a fact *means* rather than letting it stand: "represents", "symbolizes", "speaks to", "embodies", "reflects broader anxieties about". AI puffs importance by asserting that arbitrary details represent a broader trend. **Fix:** state what the thing is and does; cut the gloss and let the fact carry it ("The factory closed in 2009. Three hundred jobs.").
+**B1 — Significance / legacy inflation (incl. symbolic gloss).** *Watch:* stands/serves as, is a testament/reminder, a pivotal/crucial/key moment, underscores its importance, reflects broader, marking a shift, evolving landscape, focal point, indelible mark, deeply rooted. A narrower cousin is the **symbolic gloss** — telling the reader what a fact *means* rather than letting it stand: "represents", "symbolizes", "speaks to", "embodies", "reflects broader anxieties about". AI puffs importance by asserting that arbitrary details represent a broader trend. **Fix:** state what the thing is and does; cut the gloss and let the fact carry it ("The factory closed in 2009. Three hundred jobs."). ⚠ **Don't over-apply to plain superlatives.** Definitive statements — "one of the best", "is the only", "was the first" — are empirically *more* common in human writing than AI (Reinhart et al., PNAS). The tell is unearned significance asserted about a routine fact, not confidence itself. A writer who commits to "this was the first" is showing a human signal; strip it and you push the prose toward the hedged, non-committal register that reads machine.
 
 > …established in 1989, marking a pivotal moment in the evolution of regional statistics. → …established in 1989 to collect and publish regional statistics independently from Spain's national office.
 
 **B2 — -ing pseudo-depth.** Trailing present-participle phrases tack on fake analysis: highlighting…, ensuring…, reflecting/symbolizing…, contributing to…, showcasing…. **Fix:** cut the participle; state the fact plainly.
 
-**B3 — Copula avoidance.** *Watch:* serves as / stands as / represents / boasts / features / offers, used to dodge "is/are/has." **Fix:** restore the copula. "Gallery 825 is the exhibition space" beats "serves as."
+**B3 — Copula avoidance.** *Watch:* serves as / stands as / marks / functions as / operates as / represents, and the marketing-verb substitutes for "has" — boasts / features / maintains / offers. Also `refers to` in an opening sentence, which quietly makes the article about the *term* rather than the thing. Newer models build more elaborate dodges: "ventured into politics as a candidate" for "was a candidate", "began his career as" for "was". One study measured a >10% drop in `is`/`are` in academic writing in 2023 with no prior trend; prompting GPT-3.5 to "revise the following sentence" reliably reduced both. **Fix:** restore the copula. "Gallery 825 is the exhibition space" beats "serves as." (Don't confuse this with `has` in the past perfect — "has been featured" is fine.)
 
-**B4 — Negative parallelism and definitional negation.** "Not just X but Y", "It's not merely a song, it's a statement", "it does more than X; it Y", and the analytical cousin "X, not Y" / "a feature, not a flaw" / "X rather than Y". AI manufactures precision by defining a thing against what it isn't; the contrast usually adds nothing. **Fix:** cut the negation, say what it is. *Density:* over ~500 words the **second** instance is the tell, not the first. **Worst in titles, headings, and the first or last sentence** — the most prominent positions. The "X, Not Y" title format ("An Argument, Not a Discovery") is a cliché in its own right and leads with the tell; never title or open with one. Trained detectors name this directly as "Contrast Phrasing" / "negative parallel construction" at the document level. ⚠ This is the trap that sneaks in while "adding voice" — it *feels* emphatic and human, so audit every voice edit for it.
+**B4 — Negative parallelism and definitional negation.** Three documented subtypes:
+
+1. **Not just X, but also Y** — "not only… but also", "This choice of language is not only dismissive but also unnecessarily harsh."
+2. **Not X, but Y** — explicitly denying the first thing to assert the second: "It's not a mirror but a portal: not a representation of self, but a mechanism for its constant reinvention." Includes the analytical cousins "X, not Y" and "a feature, not a flaw".
+3. **X rather than Y** — the reversed form, especially characteristic of Grok: "prioritizing empirical consolidation of power amid fragmented loyalties rather than ideological purity."
+
+AI manufactures precision by defining a thing against what it isn't; the contrast usually adds nothing. **Fix:** cut the negation, say what it is. *Density:* over ~500 words the **second** instance is the tell, not the first. **Worst in titles, headings, and the first or last sentence** — the most prominent positions. The "X, Not Y" title format ("An Argument, Not a Discovery") is a cliché in its own right and leads with the tell; never title or open with one. Trained detectors name this directly as "Contrast Phrasing" / "negative parallel construction" at the document level. ⚠ This is the trap that sneaks in while "adding voice" — it *feels* emphatic and human, so audit every voice edit for it.
 
 > The deliberate underleverage is a feature, not a flaw. → The deliberate underleverage is intentional.
 
@@ -158,7 +167,7 @@ Each tell appears once, with its instance-form and any density threshold folded 
 
 **B6 — False ranges.** "from X to Y" where X and Y aren't on a meaningful scale ("from the singularity of the Big Bang to the enigmatic dance of dark matter"). **Fix:** just list the things.
 
-**B7 — Elegant variation (synonym + noun-phrase cycling).** Repetition-penalty artifact at two levels: word-level (protagonist → main character → central figure → hero) and noun-phrase-level, where the same referent rotates through ever-more-elaborate descriptions ("the artist" → "the non-conformist painter" → "the visionary creator"). **Fix:** pick the clearest term and repeat it — humans repeat words naturally.
+**B7 — Elegant variation (synonym + noun-phrase cycling).** Repetition-penalty artifact at two levels: word-level (protagonist → main character → central figure → hero) and noun-phrase-level, where the same referent rotates through ever-more-elaborate descriptions ("the artist" → "the non-conformist painter" → "the visionary creator"). **Fix:** pick the clearest term and repeat it — humans repeat words naturally. ⚠ **False-positive guard:** many non-native English speakers avoid repetition as a matter of training — Italian schools teach it explicitly — so synonym cycling in an ESL writer's prose is a style habit, not evidence of AI. Also skip this tell when the text was assembled from separately-written pieces, since each was generated in isolation.
 
 **B8 — Frame-then-pivot cadence.** "On paper X. But in practice Y." / "In theory X. In reality Y." / "At first glance X. On closer look Y." AI's favourite manufactured-insight move; the pivot usually restates the same point. **Fix:** one such pivot per document, maximum.
 
@@ -188,9 +197,29 @@ Each tell appears once, with its instance-form and any density threshold folded 
 
 ## Layer C — Lexical and surface
 
-**C1 — AI vocabulary (frequency tell).** *Surface list:* additionally, align with, crucial, delve, emphasizing, enduring, enhance, fostering, garner, highlight (v), interplay, intricate, key (adj), landscape (abstract), pivotal, showcase, tapestry, testament, underscore (v), valuable, vibrant. *Analytical/business sub-list:* textbook (adj), real lever, free lunch, release valve, structural headwind, dry powder, optionality, on paper, in practice, in the short/long run, at its core, at the margin, materially, asymmetries, dynamics, posture. Any one is fine; three or four in a memo is the tell — they signal "I'm being rigorous" without doing the work.
+**C1 — AI vocabulary is era-stratified (frequency tell).** The overused set *moves*. `delve` was the signature ChatGPT word in 2023–24, fell off through 2024, and dropped sharply in 2025 — a 2026 draft full of `delve` and `tapestry` is more likely imitating old AI than produced by a current model. Match the vocabulary to the era you're actually auditing:
 
-**C2 — Hard lexical banlist (0 occurrences — HARD gate, full + light).** `delve`, `tapestry`, `robust`, `leverage`, `pivotal`, `intricate`, `foster`, `navigate`, `landscape`, `underscore`, `realm`, `testament`, `crucial`, `comprehensive`, `multifaceted`, `nuanced`, `seamless`, `vibrant`, `harness`, `beacon`, `paramount`, `myriad`, `plethora`, `garner`, `bolster`, `encompass`, `intricacies`, `holistic`, `synergy`. Replace with a concrete, plainer equivalent — not another fancy synonym from the same register. Any occurrence = automatic HARD failure in the battery.
+| Era | Corroborated cluster |
+|---|---|
+| 2023 – mid-2024 (GPT-4) | additionally, boasts, bolstered, crucial, delve, emphasizing, enduring, garner, interplay, intricate/intricacies, key (adj), landscape, meticulous/meticulously, pivotal, tapestry, testament, underscore, valuable, vibrant |
+| mid-2024 – mid-2025 (GPT-4o) | align with, bolstered, crucial, emphasizing, enhance, enduring, fostering, highlighting, pivotal, showcasing, underscore, vibrant |
+| **mid-2025 → now (GPT-5)** | **emphasizing, enhance, highlighting, showcasing** — plus the notability/media-coverage phrasings in C11 |
+
+Take this literally: a word being overused by AI does **not** mean its synonyms are. `underscore` is a tell; `emphasize` in the same slot is weaker; `stress` isn't one at all. Context also matters — "underscore" as a literal underline mark or a film's incidental music is not a hit.
+
+*Analytical/business sub-list (observed, not corroborated):* textbook (adj), real lever, free lunch, release valve, structural headwind, dry powder, optionality, on paper, in practice, in the short/long run, at its core, at the margin, materially, asymmetries, dynamics, posture.
+
+Any one word is fine. Three or four clustered in a memo is the tell — they signal "I'm being rigorous" without doing the work. **Co-occurrence is the whole signal:** where there's one, there are usually others.
+
+**C2 — Lexical banlist, tiered by evidence.**
+
+**Tier 1 — corroborated (0 occurrences — HARD gate, full + light).** `delve`, `tapestry`, `robust`, `pivotal`, `intricate`, `intricacies`, `foster`, `fostering`, `landscape`, `underscore`, `testament`, `crucial`, `vibrant`, `garner`, `bolster`, `boasts`, `meticulous`, `align with`, `interplay`, `enduring`, `showcase`, `valuable`, `emphasizing`, `enhance`, `highlighting`. Each is backed by at least one study on the Wikipedia page. Any occurrence = HARD failure.
+
+**Tier 2 — observed watchlist (soft gate, ≤2 per ~500w).** `leverage`, `navigate`, `realm`, `comprehensive`, `multifaceted`, `nuanced`, `seamless`, `harness`, `beacon`, `paramount`, `myriad`, `plethora`, `encompass`, `holistic`, `synergy`. These read as corporate filler and are usually worth replacing, but no study corroborates them as AI-specific, and a human consultant writes `leverage` and `holistic` without any help from a model. Flag them; don't fail a document over them.
+
+**Grok idiolect (add when auditing Grok output).** Superficially scientific vocabulary — `causal`, `empirical`, `correlate` — plus continued heavy `underscore` use as of 2026.
+
+Replace hits with a concrete, plainer equivalent, not another fancy synonym from the same register.
 
 **C3 — Categorical academic pronouncements.** *Watch:* a textbook/canonical/paradigm case of, categorically distinct from, a structural invariant, precisely the condition under which, an instantiation of. These announce importance instead of demonstrating it. **Fix:** "HP-Autonomy is a textbook case of Roll's hubris hypothesis" → "HP-Autonomy shows the hubris pattern Roll described in 1986."
 
@@ -214,7 +243,15 @@ Each tell appears once, with its instance-form and any density threshold folded 
 
 These target the axis trained detectors score on. **Read § Honest Limits before trusting D2 on analytical/technical text — the burstiness target can push the wrong way there.**
 
-**D1 — Hedging (instance + numeric + density). ⚠ SUPPRESSED IN `light` MODE.** Over-qualifying ("could potentially possibly be argued that it might have some effect"), and softening *every* number ("down about 47%, roughly 11 bps, around $2.46B"). Humans pick a precision once and commit. **Fix:** one hedge per claim maximum; ≤1 hedged number per paragraph; ≤3 hedge-words per ~200 words; no double-hedges ("may potentially", "might possibly"). **In light mode this entire tell is off** — the source-quality protocol's `speculative`/`inferred` labels must survive (binding invariant).
+**D1 — Hedging: target stacking, not hedging itself. ⚠ SUPPRESSED IN `light` MODE.**
+
+The tell is *stacked* qualification — "could potentially possibly be argued that it might have some effect" — and softening *every* number ("down about 47%, roughly 11 bps, around $2.46B"). Humans pick a precision once and commit.
+
+⚠ **Single hedges are a human signal, and this rule used to get that wrong.** Reinhart et al. (PNAS) found hedging qualifiers and intensifiers — `very`, `perhaps`, `tends to` — occur *more* in human writing than in LLM output. Same for wordy constructions AI trims away: `as a result of`, `in order to`, `all of the`, `a part of`, `the fact that`. A de-hedging pass that strips these is running the text *toward* the machine baseline, which is the same failure mode § Honest Limits documents for D2 burstiness.
+
+**Fix:** kill double-hedges ("may potentially", "might possibly") and per-number softening. Leave single hedges alone. Density ceiling ≤6 hedge-words per ~200 words — a genuine ceiling on stacking, not a push toward zero. **In light mode the tell is entirely off** — the source-quality protocol's `speculative`/`inferred` labels must survive (binding invariant).
+
+Note the interaction with § Know your own fingerprint: stacked hedging is Claude's primary signature, so the stacking half of this rule still earns its keep when editing Claude output. It's the blanket de-hedging that was wrong.
 
 **D2 — Sentence-length CV (burstiness).** Coefficient of variation of sentence word-counts: CV ≤ 0.30 reads AI, CV ≥ 0.45 reads human. **Target the band 0.45–0.60; do not exceed ~0.65** (a 4-word sentence after a 50-word one every paragraph is itself a pattern). Per ~400 words: ≥2 sub-10-word sentences and ≥1 ≥30-word sentence; never 3 consecutive sentences within ±4 words. (Battery #1–3.)
 
@@ -226,6 +263,26 @@ These target the axis trained detectors score on. **Read § Honest Limits before
 
 **D6 — Contractions alibi floor (HARD gate).** ≥1 contraction per ~200 words; never expand them. Stripping contractions makes text *more* detectable. (Battery #14.)
 
+## Layer E — Ineffective indicators (do NOT flag these)
+
+Over-flagging has a cost. On Wikipedia, false AI accusations drive away new editors and breed a climate of suspicion; in a workplace or a classroom the equivalent is worse. Before calling anything AI, check whether the Dunning–Kruger effect or confirmation bias is doing the work — style-based detection is much harder than it feels, and confidence in your own ear is not evidence.
+
+None of the following is a tell. Several point the opposite way.
+
+| Not a tell | Why |
+|---|---|
+| **Perfect grammar** | Plenty of people write clean prose for a living. See also: a sudden shift in English variety (US↔UK) is a stronger signal than correctness itself. |
+| **Mixed casual + formal register** — "clinical" and "emotional" in one voice | Typical of technical people writing casually. Also of youth, playfulness, neurodivergence, or a document several people edited. |
+| **"Bland" or "robotic" prose** | LLM output has *specific* traits, listed above. It skews positive and verbose. Those traits don't necessarily scan as "robotic" to someone who hasn't read much of it — and plenty of human writing is dull. |
+| **"Fancy", "academic", or "formal" prose** | LLMs favor *specific words*, not the whole formal register. Difficult vocabulary and hard readability scores are not the tell; the named words are. |
+| **Transition words in isolation** | Only a handful (`Additionally`, `Consequently`, `Notably`) are documented as overused, mostly sentence-initial. Transitions are taught by style guides and common in human essays. Weak on their own. |
+| **Unsourced claims** | Over 570,000 Wikipedia articles are tagged as needing citations, most predating LLMs. Meanwhile modern chatbots browse and *do* emit citations — inaccurate ones, but present. Absence of sources says nothing either way. |
+| **A single tell of any kind** | See Governing Principle 6. Clusters are the signal. One em dash is one em dash. |
+
+**On your own detection ability.** Humans are near chance at this: one study measured 57% recognition of AI text and 64% of human text. Heavy LLM users do far better — around 90% — so fluency with the output is the variable that matters, not general intelligence or writing skill. Meanwhile human speech and writing are increasingly absorbing LLM patterns, which erodes the distinction from the other direction. Hold conclusions loosely.
+
+**On detector tools.** They beat chance but carry non-trivial error rates, fail against paraphrasing, and fail against models they weren't trained on. A high AI score from a detector is not proof and should never be the sole basis for an accusation. See § Honest Limits for what a controlled run of this actually looked like.
+
 ## Communication artifacts (cut whenever the skill is on)
 
 - **Collaborative chatbot artifacts:** "I hope this helps", "Certainly!", "You're absolutely right!", "Would you like…", "Here is a…". Pasted-correspondence residue.
@@ -235,7 +292,19 @@ These target the axis trained detectors score on. **Read § Honest Limits before
 
 ## Human signals worth adding (for genuine quality, not to game a detector)
 
-The study isolated three moves that reliably read human — apply them because they make the writing better:
+**Syntactic signals (corroborated).** Reinhart et al. (PNAS) and 25 years of Wikipedia text identify constructions measurably more common in human writing than AI. LLMs avoid them by default because they're reaching for what they take to be a "formal, neutral, encyclopedic tone." Restoring them is not a trick — most are just plainer English:
+
+| Restore | Instead of |
+|---|---|
+| Simple `is`/`has` phrasing — *there is a*, *it has a* | serves as, functions as, boasts, features |
+| Plain verbs — *wrote*, *moved*, *used*, *tried*, *died* | authored, relocated, utilized, attempted, passed away |
+| Definitive statements — *one of the best*, *is the only*, *was the first* | hedged non-commitment |
+| Single hedges and intensifiers — *very*, *perhaps*, *tends to* | flat declaratives (and see D1) |
+| Ordinary wordiness — *as a result of*, *in order to*, *all of the*, *a part of*, *the fact that* | maximally compressed phrasing |
+
+The last two rows will feel wrong to anyone trained on Strunk & White. That's the point: the standard advice to tighten, de-hedge, and commit produces exactly the register a classifier reads as machine. Tighten for the reader where it helps; don't tighten as a reflex.
+
+**Authorial signals (from the 2026-06-12 study).** Three moves that read human — apply them because they make the writing better:
 
 - **Subjective stance markers.** First-person epistemic framing: "my reading is", "I'd argue", "what strikes me", "what I find genuinely difficult". Open interpretive paragraphs with one. **But phrasing matters more than the pronoun** — a stance in formal/literary register still reads impersonal (see B17). Say it the plain way you'd say it aloud.
 - **Earned idiom.** Non-literal, relatable phrasing that does analytical work: "winner's curse", "burning cash", "justification written after the decision", "luck dressed up as judgment". The mechanism is unpredictability of phrasing, not sophistication — and decorative idiom (C9) is still a tell.
@@ -250,7 +319,16 @@ You are usually editing Claude's own output, so front-weight Claude's signature 
 - **AI-vocabulary connectives** — "Additionally", "Furthermore" as sentence openers (C8).
 - **Long, qualified, mid-length sentences** rather than ChatGPT-style bold/bullet formatting.
 
-For contrast: ChatGPT skews to formatting (bold, emoji, inline-header lists, "Let's dive in"); Gemini to content inflation (promotional language, "In today's world", generic upbeat conclusions). Knowing the source narrows the search.
+**Every model has an idiolect, and they diverge measurably** (Sun et al., *Idiosyncrasies in Large Language Models*; Rudnicka in *Scientific American*). What's typical of GPT-5 is not typical of GPT-4 or Gemini, so identifying the source narrows the search a lot:
+
+| Model | Skews toward |
+|---|---|
+| **Claude** | Stacked hedging; long qualified sentences; comparatively concise; *less* prone to broader-context inflation |
+| **ChatGPT** | Formatting (bold, emoji, inline-header lists, "Let's dive in"); broader-context framing; the era-vocabulary clusters in C1 |
+| **Gemini** | Content inflation — promotional language, "In today's world", generic upbeat conclusions; comparatively concise |
+| **Grok** | "Scientific" vocabulary (causal, empirical, correlate); heavy `underscore` into 2026; the "X rather than Y" negative parallelism (B4.3); very long output |
+
+Broader-context inflation is characteristic of ChatGPT and Grok specifically — Gemini and Claude do it less. Treat all of this as where-to-look-first rather than a classifier: models converge as they're trained on each other's output, and these fingerprints shift with every release.
 
 ---
 
@@ -271,13 +349,14 @@ python3 /Users/karimatari/.claude/skills/humanizer/score.py <draft> --mode <full
 | 3 | Long sentences (≥30w) | ≥1 per 400w | soft | script |
 | 4 | Paragraph max/min ratio | ≥ 2.5× | HARD | script |
 | 5 | No 3-paragraph clustering | 0 clusters | soft | script |
-| 6 | Banned vocab | 0 hits | HARD | script (full+light) |
+| 6 | Banned vocab — tier 1 (corroborated) | 0 hits | HARD | script (full+light) |
+| 6b | Banned vocab — tier 2 (observed watchlist) | ≤2 per 500w | soft | script (full+light) |
 | 7 | Em dashes | 0 | HARD | script (full+light) |
 | 8 | Signpost density | ≤1/300w, 0 bad openers | HARD | script (full+light) |
 | 9 | Tricolon density | ≤1/200w | soft | script |
 | 10 | Negation-reversal (incl. cross-sentence "X isn't A. It's B.") | ≤1/500w | HARD | script |
 | 11 | Colon-restatement | ≤1/600w | soft | **model-judgment** |
-| 12 | Hedge density | ≤3/200w, no double-hedges | soft | script |
+| 12 | Hedge stacking (double-hedges + density ceiling) | ≤6/200w, 0 double-hedges | soft | script |
 | 13 | Perplexity-anchor coverage | ≥1 per paragraph | soft | **model-judgment** |
 | 14 | Contractions (alibi presence) | ≥1/200w | HARD | script |
 
@@ -351,6 +430,8 @@ Added 2026-06-12 after a controlled study: six rewrites across two genres (a fin
 
 7. **The voice trap.** Reaching for "voice" smuggles in new tells — the negation-reversal "X is not A, it is B" (B4) feels emphatic and human, so it creeps in, but it is a named AI signature. Audit every voice edit against Layers A–C: a stance/idiom gain that adds a negation-reversal, a colon-definition, or a formal connective is a net loss.
 
+**Independent corroboration (added 2026-07-30).** The findings above came from one author's controlled run against one oracle. Wikipedia's own caveats now say compatible things from separate evidence: AI detection tools "perform better than random chance" but carry non-trivial error rates and fail against paraphrasing and unfamiliar models, and a high detector score is explicitly *not* valid grounds for deletion. On human judgment, one study measured 57% recognition of AI text and 64% of human text — near chance — while heavy LLM users reached roughly 90%. Two independent lines of evidence, same conclusion: neither the tools nor the readers are reliable enough to justify confident accusation, and neither is a target worth optimizing against.
+
 > **Integrity note.** This layer is for understanding and honestly reporting detector behavior, and for writing that is genuinely more human. It is not a guarantee-evasion tool. On graded or attested work, "make AI output pass a detector" is an academic-integrity problem — surface it; write the draft yourself and use the model as an editor (human-drafted → AI-tightened survives; AI-drafted → human-flavored does not); keep process artifacts. Don't iterate rewrites against the verdict — six data points say it doesn't move.
 
 **Second live confirmation (2026-06-12).** A clean, battery-passing 960-word essay (CV 0.63, first-person stance, concrete named cases, zero banlist/em-dashes) was scanned on GPTZero 4.6b: **100% AI, 0% human** — even though the panel marked *seven* sentences human ("Engaging Sentence Variety," a simple direct paradox). The named AI drivers were the skill's own tells: "Contrast Phrasing" (B4 — the title was "X, Not Y"), "Impersonal Tone" (B17 — formal phrasing of a personal stance), "Mechanical Transitions" (B18 — smooth multi-clause sentences). B17 and B18 were *added* in response to this scan; they make the prose better and turn more sentences green, but the run is the proof that **more patterns move the panel, not the document verdict.** The panel and the verdict are decoupled; pattern-completeness is not the bottleneck — authorship direction is.
@@ -387,4 +468,17 @@ Added 2026-06-12 after a controlled study: six rewrites across two genres (a fin
 
 ## Reference
 
-Based on [Wikipedia: Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) (WikiProject AI Cleanup), plus the 2026-06-12 GPTZero study (§ Honest Limits). Key Wikipedia insight: "LLMs use statistical algorithms to guess what should come next. The result tends toward the most statistically likely result that applies to the widest variety of cases."
+Based on [Wikipedia: Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) (WikiProject AI Cleanup), **synced 2026-07-30**, plus the 2026-06-12 GPTZero study (§ Honest Limits). Key Wikipedia insight: "LLMs use statistical algorithms to guess what should come next. The result tends toward the most statistically likely result that applies to the widest variety of cases."
+
+Studies cited on that page and relied on here:
+
+- Reinhart, Markey, Laudenbach & Brown, *Do LLMs write like humans? Variation in grammatical and rhetorical styles* — PNAS. Source for the human-syntax signals (D1, § Human signals).
+- Kobak, González-Márquez, Horvát & Lause, *Delving into LLM-assisted writing in biomedical publications through excess vocabulary* — Science Advances, 2025. Source for the corroborated vocabulary tiers (C1/C2).
+- Juzek & Ward, *Why Does ChatGPT "Delve" So Much?* — ACL 2025; and *Word Overuse and Alignment in LLMs* (arXiv 2508.01930).
+- Geng & Trotta, *Human-LLM Coevolution* and *Is ChatGPT Transforming Academics' Writing Style?* (arXiv 2404.08627) — source for the copula-avoidance measurement (B3).
+- Huang et al., *Wikipedia in the Era of LLMs: Evolution and Risks* — elegant variation and copula decline.
+- Sun, Yin, Xu, Koller & Liu, *Idiosyncrasies in Large Language Models* (arXiv 2502.12150) — model idiolects (§ Know your own fingerprint).
+- Murray & Tersigni, *Can instructors detect AI-generated papers?* — Journal of Applied Learning & Teaching, 2024 — human detection rates (Layer E).
+- Merrill, Chen & Kumer, *What are the clues that ChatGPT wrote something?* — Washington Post, Nov 2025 — vocabulary drift over time.
+
+**Changelog — v2.8.0 (2026-07-30).** Synced against the current Wikipedia page. Vocabulary restructured into era tiers (C1) because the overused set has shifted since 2023 and the old flat list was calibrated to a dead era. Banlist split into corroborated (HARD) and observed (soft) tiers (C2) — 15 words previously HARD-gated have no study behind them. D1 reversed on single hedges and B1 on plain superlatives, both on PNAS evidence that they're human signals. New Layer E (ineffective indicators) added. Human-signals section rebuilt on the syntax research. Model-fingerprint table extended with Grok and idiolect citations.

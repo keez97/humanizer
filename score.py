@@ -22,10 +22,11 @@ import re
 import sys
 import math
 import argparse
+import os
 
 
 # ---------------------------------------------------------------------------
-# Constants
+# Constants (hardcoded defaults — unchanged when --config is absent)
 # ---------------------------------------------------------------------------
 
 BANNED_VOCAB = {
@@ -73,6 +74,190 @@ DOUBLE_HEDGE_PAIRS = [
     (r"\bperhaps possibly\b", "perhaps possibly"),
     (r"\bseems? to suggest\b", "seems to suggest"),
 ]
+
+# ---------------------------------------------------------------------------
+# Config loader — optional --config <path> support
+# ---------------------------------------------------------------------------
+# CONTRACT:
+#   Absent → byte-for-byte identical behavior to today (hardcoded defaults used).
+#   Present → loads YAML/JSON config; config may EXTEND/OVERRIDE hardcoded defaults
+#             but CANNOT weaken strictness below current levels.
+#   Missing/malformed config file → warn to stderr, fall back to hardcoded defaults.
+#   score.py is PROJECT-AGNOSTIC: it accepts a path from the caller; it never
+#   calls resolve-standard.sh or reads any Historiai-specific paths.
+# ---------------------------------------------------------------------------
+
+def _load_config(config_path: str) -> dict:
+    """
+    Load a YAML or JSON config file and return it as a dict.
+    Returns {} (empty dict) on any error, after printing a warning to stderr.
+    Uses PyYAML if available, else falls back to json (for JSON-subset configs).
+    """
+    if not os.path.isfile(config_path):
+        print(
+            f"humanizer/score.py: WARNING — config file not found: {config_path}; "
+            "falling back to hardcoded defaults.",
+            file=sys.stderr,
+        )
+        return {}
+    try:
+        with open(config_path, "r", encoding="utf-8") as fh:
+            raw = fh.read()
+    except OSError as exc:
+        print(
+            f"humanizer/score.py: WARNING — could not read config file: {exc}; "
+            "falling back to hardcoded defaults.",
+            file=sys.stderr,
+        )
+        return {}
+
+    # If the file is a markdown doc (starts with <!-- or #), extract the
+    # fenced ```yaml block first before parsing. This handles compiled
+    # standards docs like humanizer-instructions.md which embed the
+    # machine-readable block inside a markdown file.
+    stripped = raw.lstrip()
+    if stripped.startswith("<!--") or stripped.startswith("#"):
+        import re as _re
+        yaml_match = _re.search(r"```yaml\n(.*?)\n```", raw, _re.DOTALL)
+        if yaml_match:
+            raw = yaml_match.group(1)
+        else:
+            print(
+                f"humanizer/score.py: WARNING — config file looks like markdown but "
+                "contains no ```yaml block; falling back to hardcoded defaults.",
+                file=sys.stderr,
+            )
+            return {}
+
+    # Try PyYAML first (handles YAML and JSON); fall back to stdlib json.
+    try:
+        import yaml  # type: ignore
+        data = yaml.safe_load(raw)
+    except ImportError:
+        try:
+            import json
+            data = json.loads(raw)
+        except Exception as exc:
+            print(
+                f"humanizer/score.py: WARNING — config parse failed (yaml unavailable, json failed: {exc}); "
+                "falling back to hardcoded defaults.",
+                file=sys.stderr,
+            )
+            return {}
+    except Exception as exc:
+        print(
+            f"humanizer/score.py: WARNING — config parse failed: {exc}; "
+            "falling back to hardcoded defaults.",
+            file=sys.stderr,
+        )
+        return {}
+
+    if not isinstance(data, dict):
+        print(
+            f"humanizer/score.py: WARNING — config root is not a mapping (got {type(data).__name__}); "
+            "falling back to hardcoded defaults.",
+            file=sys.stderr,
+        )
+        return {}
+    return data
+
+
+def _apply_config(config: dict, mode: str = "light") -> None:
+    """
+    Apply config parameters to the module-level constants (mutates in-place).
+    CONTRACT: config may only EXTEND or TIGHTEN defaults — it cannot:
+      - Remove entries from BANNED_VOCAB (it can only add more)
+      - Lower the em-dash count threshold (it is always 0 — config cannot raise it)
+      - Reduce SIGNPOST_WORDS (only extend)
+      - Reduce HEDGE_WORDS (only extend)
+    These invariants prevent a config from weakening the scorer below current strictness.
+
+    Primary schema — voice/house-style standard's surface_tells[] (the canonical form):
+      surface_tells:
+        - pattern: "transition_meta_commentary"
+          examples: ["It is worth noting that", ...]
+          scrub_in: [FULL, LIGHT]
+        ...
+
+      Each tell's examples[] entries are added to BANNED_VOCAB when the active
+      scoring mode is in scrub_in. Mapping: FULL→"full", LIGHT→"light",
+      NONE→never applied. A tell with scrub_in:[FULL] is only applied for mode=="full";
+      a tell with scrub_in:[FULL,LIGHT] is applied for both modes.
+      This is the primary way the voice standard drives the scorer.
+
+    Secondary schema — explicit extend keys (still supported; for callers adding custom patterns):
+      banned_vocab_extend: [word, ...]          — adds words to BANNED_VOCAB (no removes)
+      signpost_words_extend: [pattern, ...]     — adds regex patterns to SIGNPOST_WORDS
+      hedge_words_extend: [pattern, ...]        — adds regex patterns to HEDGE_WORDS
+      bad_openers_extend: [pattern, ...]        — adds regex patterns to BAD_OPENERS
+    """
+    global BANNED_VOCAB, SIGNPOST_WORDS, HEDGE_WORDS, BAD_OPENERS
+
+    # --- Primary schema: surface_tells[] from the voice standard ---
+    # Map scoring mode strings to standard tier names.
+    # "full" matches both FULL and LIGHT scrub_in tiers.
+    # "light" matches only LIGHT scrub_in tier.
+    _mode_tiers = {"full": {"FULL", "LIGHT"}, "light": {"LIGHT"}}
+    active_tiers = _mode_tiers.get(mode, {"LIGHT"})
+
+    surface_tells = config.get("surface_tells", [])
+    if surface_tells and isinstance(surface_tells, list):
+        for tell in surface_tells:
+            if not isinstance(tell, dict):
+                continue
+            scrub_in = tell.get("scrub_in", [])
+            if not isinstance(scrub_in, list):
+                continue
+            # Only apply this tell if the active mode's tiers intersect with scrub_in.
+            if not active_tiers.intersection(set(scrub_in)):
+                continue
+            # Apply examples[] as literal banned phrases (added to BANNED_VOCAB as
+            # lowercased multi-word phrases; check_banned_vocab uses word-boundary regex
+            # for single words but multi-word phrases need substring search — handled below
+            # via the _SURFACE_TELL_PHRASES set which uses substring matching).
+            examples = tell.get("examples", [])
+            if examples and isinstance(examples, list):
+                for phrase in examples:
+                    if isinstance(phrase, str) and phrase.strip():
+                        _SURFACE_TELL_PHRASES.add(phrase.strip().lower())
+
+    # --- Secondary schema: explicit extend keys (backward-compatible) ---
+    # banned_vocab_extend: extend-only, no removes (hardcoded + configured = union)
+    extend_vocab = config.get("banned_vocab_extend", [])
+    if extend_vocab and isinstance(extend_vocab, list):
+        for w in extend_vocab:
+            if isinstance(w, str) and w.strip():
+                BANNED_VOCAB.add(w.strip().lower())
+
+    # signpost_words_extend: adds regex patterns
+    extend_signpost = config.get("signpost_words_extend", [])
+    if extend_signpost and isinstance(extend_signpost, list):
+        for p in extend_signpost:
+            if isinstance(p, str) and p.strip():
+                SIGNPOST_WORDS.append(p.strip())
+
+    # hedge_words_extend: adds regex patterns
+    extend_hedge = config.get("hedge_words_extend", [])
+    if extend_hedge and isinstance(extend_hedge, list):
+        for p in extend_hedge:
+            if isinstance(p, str) and p.strip():
+                HEDGE_WORDS.append(p.strip())
+
+    # bad_openers_extend: adds regex patterns for paragraph opener checks
+    extend_openers = config.get("bad_openers_extend", [])
+    if extend_openers and isinstance(extend_openers, list):
+        for p in extend_openers:
+            if isinstance(p, str) and p.strip():
+                BAD_OPENERS.append(p.strip())
+
+
+# Module-level set for surface-tell phrases loaded from config.
+# Populated by _apply_config when --config is given; empty otherwise.
+# Uses substring matching (not word-boundary regex) because phrases like
+# "it is worth noting that" span multiple words and regex word-boundary
+# doesn't apply cleanly to multi-word expressions.
+_SURFACE_TELL_PHRASES: set = set()
+
 
 # Common English abbreviations to guard against false sentence splits
 ABBREV_PATTERN = re.compile(
@@ -287,6 +472,27 @@ def check_banned_vocab(text: str) -> tuple[str, str, bool, list[str]]:
     return (value_str, "0 hits", len(found) == 0, found)
 
 
+def check_surface_tell_phrases(text: str) -> tuple[str, str, bool, list[str]]:
+    """#6b — Surface-tell phrases from voice standard: 0 occurrences (HARD).
+    Only active when _SURFACE_TELL_PHRASES is non-empty (i.e. --config was given
+    and the standard's surface_tells contained examples for the active mode).
+    Uses substring matching (case-insensitive) — multi-word phrases like
+    'it is worth noting that' are not amenable to word-boundary regex.
+    Returns passed=True (no-op) when _SURFACE_TELL_PHRASES is empty, so the
+    check is invisible when no config is loaded (backward-compat preserved).
+    """
+    if not _SURFACE_TELL_PHRASES:
+        return ("0", "0 hits", True, [])
+    text_lower = text.lower()
+    found = []
+    for phrase in _SURFACE_TELL_PHRASES:
+        if phrase in text_lower:
+            found.append(phrase)
+    found.sort()
+    value_str = str(len(found)) + (f" ({', '.join(found)})" if found else "")
+    return (value_str, "0 hits", len(found) == 0, found)
+
+
 def check_em_dash(text: str) -> tuple[str, str, bool]:
     """#7 — Em dashes: 0 (HARD)"""
     # Unicode em-dash U+2014, and also -- double-hyphen used as em-dash
@@ -456,6 +662,13 @@ def score(text: str, mode: str) -> int:
     bv_val, bv_thresh, bv_ok, _ = check_banned_vocab(prose)
     record("banned-vocab", bv_val, bv_thresh, "HARD", bv_ok)
 
+    # #6b surface-tell phrases from voice standard (no-op when config absent)
+    st_val, st_thresh, st_ok, _ = check_surface_tell_phrases(prose)
+    if _SURFACE_TELL_PHRASES:
+        # Only emit the check row when the config actually loaded phrases.
+        # Absent config → invisible (backward-compat: no new SKIPPED line in output).
+        record("surface-tell-phrases", st_val, st_thresh, "HARD", st_ok)
+
     # #7 em-dash
     em_val, em_thresh, em_ok = check_em_dash(prose)
     record("em-dash", em_val, em_thresh, "HARD", em_ok)
@@ -562,7 +775,12 @@ def main():
             "Exit code: 0 = PASS, 1 = FAIL\n\n"
             "Ship-eligibility: ALL HARD gates pass AND <=2 soft gates fail.\n"
             "--mode light activates ONLY checks #6 (banned-vocab), #7 (em-dash), "
-            "#8 (signpost-density). All other checks are SKIPPED."
+            "#8 (signpost-density). All other checks are SKIPPED.\n\n"
+            "--config <path> (optional): load a YAML/JSON config file to extend the\n"
+            "  hardcoded defaults. Config may only ADD tells/vocab — it cannot remove\n"
+            "  or weaken existing checks. Absent/missing/malformed config → falls back\n"
+            "  to hardcoded defaults (never crashes; never weakens the scorer).\n"
+            "  This script is PROJECT-AGNOSTIC: it reads the path you hand it."
         ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
@@ -577,7 +795,24 @@ def main():
         default="full",
         help="Scoring mode: 'full' (all checks) or 'light' (#6/#7/#8 only). Default: full.",
     )
+    parser.add_argument(
+        "--config",
+        default=None,
+        metavar="PATH",
+        help=(
+            "Optional path to a YAML/JSON config file that extends (but never weakens) "
+            "the hardcoded scoring defaults. Absent → hardcoded defaults used unchanged. "
+            "Missing/malformed → warning to stderr, fall back to hardcoded defaults."
+        ),
+    )
     args = parser.parse_args()
+
+    # Apply config if provided — must happen before any scoring logic runs.
+    # Pass mode so surface_tells are tier-filtered correctly before scoring.
+    if args.config is not None:
+        cfg = _load_config(args.config)
+        if cfg:
+            _apply_config(cfg, mode=args.mode)
 
     if args.textfile:
         try:
