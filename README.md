@@ -20,13 +20,17 @@ So this is a writing-quality tool. Every rule in it also makes prose less generi
 git clone https://github.com/keez97/humanizer.git ~/.claude/skills/humanizer
 ```
 
-That is the whole install. `score.py` is stdlib-only, so there is nothing to pip install and no virtualenv to create.
+That is the whole install. `score.py` is stdlib-only, so there is nothing to pip install and no virtualenv to create. Update with `git -C ~/.claude/skills/humanizer pull`.
 
-To update:
+Cloned into your skills directory like that, it loads as a skills-directory plugin and the skill keeps its plain name, so you invoke it as `/humanizer`.
+
+It also ships a plugin manifest, so you can load it as a normal plugin instead:
 
 ```bash
-git -C ~/.claude/skills/humanizer pull
+claude --plugin-dir /path/to/humanizer
 ```
+
+Loaded that way the skill is namespaced, so it becomes `/humanizer:humanizer`. Both routes run identical rules; pick whichever fits how you manage extensions.
 
 ## Usage
 
@@ -101,6 +105,7 @@ The underlying pattern catalogue originates with Wikipedia's [Signs of AI writin
 | File | What it is |
 |---|---|
 | `SKILL.md` | The canonical rule set. Everything else is support. |
+| `.claude-plugin/plugin.json` | Plugin manifest, so the repo can be loaded as a Claude Code plugin as well as a plain skill. |
 | `score.py` | The scoring battery. Stdlib only. |
 | `perplexity.py`, `binoculars.py` | Local detector-metric experiments. Kept as infrastructure, and documented in `SKILL.md` as *not* faithful proxies for how modern detectors behave. They need PyTorch if you want to run them. |
 

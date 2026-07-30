@@ -1,0 +1,11 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-plugin-manifest.json",
+  "name": "humanizer",
+  "description": "Remove signs of AI-generated writing from prose. Era-tiered vocabulary, a false-positive layer, a no-fabrication guard, and a dependency-free scoring battery. Honest about what editing can and cannot do to a detector verdict.",
+  "version": "2.9.0",
+  "author": { "name": "Karim Atari", "url": "https://github.com/keez97" },
+  "homepage": "https://github.com/keez97/humanizer",
+  "repository": "https://github.com/keez97/humanizer",
+  "license": "MIT",
+  "keywords": ["writing", "editing", "ai-detection", "humanize", "prose", "style"]
+}
