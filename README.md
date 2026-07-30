@@ -94,6 +94,14 @@ Synced against the current version of Wikipedia's [Signs of AI writing](https://
 - **Model idiolects.** Claude, ChatGPT, Gemini, and Grok have measurably different fingerprints. Knowing the source narrows where to look.
 - **Scorer fix:** vocabulary is stored as lemmas now and inflected at match time. The old exact matching silently missed `showcases`, `underscored`, `bolstered`, and `aligned with`.
 
+## Portability
+
+`SKILL.md` conforms to the [Agent Skills](https://agentskills.io) open standard, which a good number of agents now read: Cursor, Gemini CLI, OpenAI Codex, GitHub Copilot, VS Code, Goose, OpenCode, Roo Code, Amp, and others. The frontmatter sets only `name`, `description`, `license`, and `metadata`, so nothing in it is tied to one product. `allowed-tools` is deliberately absent; the spec marks it experimental with support that varies by agent.
+
+`score.py` is stdlib Python and cares about no agent at all. You can run it on a text file with no LLM in the loop.
+
+So the rules travel. Point any skills-compatible agent at this directory, or just paste `SKILL.md` into a system prompt.
+
 ## Attribution
 
 This is an independent rewrite descended from [blader/humanizer](https://github.com/blader/humanizer) by Siqi Chen, MIT licensed. The two have diverged: as of this version they share six lines of text, all of them headings and frontmatter keys. The layer taxonomy, the mode system, the statistical battery, and all of the Python are written here. The debt is real anyway, and that project is worth reading on its own.

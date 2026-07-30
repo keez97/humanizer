@@ -1,6 +1,5 @@
 ---
 name: humanizer
-version: 2.9.0
 description: |
   Remove signs of AI-generated writing from text — descriptive prose (heritage
   puffery, inflated symbolism, promotional language) and analytical/argumentative
@@ -9,13 +8,9 @@ description: |
   model, a false-positive layer, a statistical-distribution layer, mode tiering
   (full/light/off/detect), a self-scoring script, optional writing-sample voice
   calibration, a no-fabrication guard, and an honest detection-resistance layer.
-allowed-tools:
-  - Read
-  - Write
-  - Edit
-  - Grep
-  - Glob
-  - AskUserQuestion
+license: MIT
+metadata:
+  version: "2.9.0"
 ---
 
 # Humanizer: Remove AI Writing Patterns
@@ -44,19 +39,13 @@ This does not make the skill pointless. Weak detectors *are* beatable with the r
 
 Declare the mode before Pass 1. If unspecified, infer from the output class via the tiering table. **When in doubt → `light`.**
 
-### `full`
-Every rule applies: all named tells, the statistical-distribution targets, the soul/imperfection mandate, and the self-scoring battery as a ship gate. Use for: graded essays, external deliverables (cover letters, exec summaries for human readers), method narratives, published body copy, narrative/cover prose.
+**`full`** — every rule applies: all named tells, the statistical-distribution targets, the soul/imperfection mandate, and the self-scoring battery as a ship gate.
 
-### `light`
-**Surface-tell scrubbing only.** Active: banned vocab (C2), em-dash (C5), signpost density (C8). Everything else is off — including the soul/imperfection mandate.
+**`light`** — surface-tell scrubbing only. Active: banned vocab (C2), em-dash (C5), signpost density (C8). Everything else is off, including the soul/imperfection mandate. **De-hedging is suppressed** (D1 and the hedge/numeric rules do NOT apply) — a binding invariant, not a preference: the source-quality protocol requires `speculative` and `inferred` labels to survive on analytical deliverables, and an aggressive de-hedging pass would strip them.
 
-**De-hedging is suppressed in light mode** (tells D1 and the hedge/numeric/over-hedge rules do NOT apply). This is a binding invariant, not a preference: the source-quality protocol requires `speculative` and `inferred` confidence labels to survive on analytical deliverables, and an aggressive de-hedging pass would strip them. Use for: analytical docs (case studies, consulting memos, technical docs, validation-scorecard prose).
+**`off`** — skill not applied.
 
-### `off`
-Skill not applied. Use for: chat replies, status updates, tables, code, commit messages, JSONL/YAML, internal artifacts (state.md, plans, handoffs, source-ledgers), frontend chrome and structured-view scaffolding.
-
-### `detect`
-**Flag-only — no rewrite.** Audit the text and report tells without changing a word. Use when the writer wants to decide what to fix, when the text is someone else's or already published, or as a pipeline/gate check. Triggers: "detect", "flag only", "audit", "scan", "what's AI here". Output the tells grouped by severity, each with the offending span quoted and a one-line verdict — **definitely fix** vs **judgment call** (some AI-associated moves are fine in small doses; a lone tell is not a confession):
+**`detect`** — flag-only, no rewrite. Audit and report without changing a word. Use when the writer wants to choose what to fix, when the text is someone else's or already published, or as a pipeline gate. Triggers: "detect", "flag only", "audit", "scan", "what's AI here". Group tells by severity, each with the offending span quoted and a verdict — **definitely fix** vs **judgment call** (a lone tell is not a confession):
 
 - **P0 — credibility-killers:** chatbot artifacts, knowledge-cutoff disclaimers, vague attribution with no source, significance inflation on routine facts.
 - **P1 — obvious AI smell:** the structural/cadence tells (reshuffleable paragraphs, colon-cascades, stacked declaratives, rule-of-three saturation, treadmill restatement, source-review framing).
@@ -68,13 +57,10 @@ If the text is clean, say so. Pair with `score.py` for the mechanical half.
 
 | Output class | Mode | Rationale |
 |---|---|---|
-| Graded essay (academic) | **full** | Detection matters most; voice is an asset |
-| External deliverable / published body (cover letter, exec summary, method narrative) | **full** | Detection matters; voice is an asset |
-| Narrative / cover prose | **full** | Same |
+| Graded essay, cover letter, exec summary, method narrative, published body, narrative prose | **full** | Detection matters; voice is an asset |
 | Analytical doc (case study, consulting memo, technical doc, validation scorecard) | **light** | Preserve analytical register and all confidence-label hedging. "Add opinions / I genuinely don't know" violates consulting register |
 | Chat reply, status update | **off** | Terse/table preference wins; folksy register degrades comms |
-| Table / scorecard | **off** | Length/CV/rule-of-three rules are nonsensical on tabular data |
-| Code / commit / JSONL / YAML | **off** | "Inject personality" corrupts machine-readable structure |
+| Table / scorecard, code, commit, JSONL/YAML | **off** | Length/CV/rule-of-three rules are nonsensical on tabular data; "inject personality" corrupts machine-readable structure |
 | Internal artifacts (state.md, plans, briefs, ledgers, handoffs) | **off** | Parsers depend on structure |
 | Frontend chrome / structured-view scaffolding | **off** | The narrative *body* of a deliverable is full; chrome is off |
 
@@ -330,18 +316,11 @@ The last two rows will feel wrong to anyone trained on Strunk & White. That's th
 
 ## Know your own fingerprint (this skill usually runs under Claude)
 
-You are usually editing Claude's own output, so front-weight Claude's signature cluster — the tells most likely present and least likely to feel wrong from the inside (per humanink's model-fingerprint work; treat as where-to-look-first, not a classifier, since models converge and evolve):
-
-- **Stacked hedging** ("could", "potentially", "possibly", "might" piled up) — humanink calls the hedging cluster Claude's primary signal. (In `light` mode de-hedge nothing — see D1 — but still flag genuine *double*-hedges.)
-- **"It is worth noting that" / "It is important to note that"** filler hedges.
-- **AI-vocabulary connectives** — "Additionally", "Furthermore" as sentence openers (C8).
-- **Long, qualified, mid-length sentences** rather than ChatGPT-style bold/bullet formatting.
-
-**Every model has an idiolect, and they diverge measurably** (Sun et al., *Idiosyncrasies in Large Language Models*; Rudnicka in *Scientific American*). What's typical of GPT-5 is not typical of GPT-4 or Gemini, so identifying the source narrows the search a lot:
+You are usually editing Claude's own output, so front-weight Claude's row below — those tells are the most likely present and the least likely to feel wrong from the inside. **Every model has an idiolect, and they diverge measurably** (Sun et al., *Idiosyncrasies in Large Language Models*; Rudnicka in *Scientific American*); what's typical of GPT-5 is not typical of GPT-4 or Gemini, so identifying the source narrows the search a lot:
 
 | Model | Skews toward |
 |---|---|
-| **Claude** | Stacked hedging; long qualified sentences; comparatively concise; *less* prone to broader-context inflation |
+| **Claude** | Stacked hedging ("could/potentially/possibly/might" piled up) — its primary signal; "It is worth noting that" filler hedges; "Additionally"/"Furthermore" openers (C8); long qualified sentences rather than ChatGPT-style bold/bullet formatting; comparatively concise; *less* prone to broader-context inflation. In `light` mode de-hedge nothing (D1), but still flag genuine *double*-hedges |
 | **ChatGPT** | Formatting (bold, emoji, inline-header lists, "Let's dive in"); broader-context framing; the era-vocabulary clusters in C1 |
 | **Gemini** | Content inflation — promotional language, "In today's world", generic upbeat conclusions; comparatively concise |
 | **Grok** | "Scientific" vocabulary (causal, empirical, correlate); heavy `underscore` into 2026; the "X rather than Y" negative parallelism (B4.3); very long output |
@@ -504,5 +483,3 @@ Studies cited on that page and relied on here:
 - Sun, Yin, Xu, Koller & Liu, *Idiosyncrasies in Large Language Models* (arXiv 2502.12150) — model idiolects (§ Know your own fingerprint).
 - Murray & Tersigni, *Can instructors detect AI-generated papers?* — Journal of Applied Learning & Teaching, 2024 — human detection rates (Layer E).
 - Merrill, Chen & Kumer, *What are the clues that ChatGPT wrote something?* — Washington Post, Nov 2025 — vocabulary drift over time.
-
-**Changelog — v2.8.0 (2026-07-30).** Synced against the current Wikipedia page. Vocabulary restructured into era tiers (C1) because the overused set has shifted since 2023 and the old flat list was calibrated to a dead era. Banlist split into corroborated (HARD) and observed (soft) tiers (C2) — 15 words previously HARD-gated have no study behind them. D1 reversed on single hedges and B1 on plain superlatives, both on PNAS evidence that they're human signals. New Layer E (ineffective indicators) added. Human-signals section rebuilt on the syntax research. Model-fingerprint table extended with Grok and idiolect citations.
