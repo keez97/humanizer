@@ -172,7 +172,7 @@ DOUBLE_HEDGE_PAIRS = [
 #             but CANNOT weaken strictness below current levels.
 #   Missing/malformed config file → warn to stderr, fall back to hardcoded defaults.
 #   score.py is PROJECT-AGNOSTIC: it accepts a path from the caller; it never
-#   calls resolve-standard.sh or reads any Historiai-specific paths.
+#   resolves a standard itself or reads any project-specific paths.
 # ---------------------------------------------------------------------------
 
 def _load_config(config_path: str) -> dict:
@@ -393,8 +393,19 @@ TRICOLON_RE = re.compile(
 
 def strip_non_prose(text: str) -> str:
     """
-    Strip markdown headings, table rows, fenced code blocks, and blank lines
-    that are purely structural.  Returns the reduced text preserving prose.
+    Strip markdown headings, table rows, fenced code blocks, blockquotes,
+    inline code spans, and structural blank lines. Returns the reduced text
+    preserving prose.
+
+    Blockquotes and inline code are dropped for the same reason as fenced
+    code: they are quoted or illustrative material, not the author's own
+    prose, and SKILL.md governing principle 7 says never to flag those. A
+    document that *discusses* the banlist -- this project's own README and
+    SKILL.md both do -- would otherwise fail on the words it is naming.
+
+    Inline code collapses to a single placeholder token rather than vanishing,
+    so sentence-length statistics stay honest. A multi-word span counts as one
+    word after collapsing; that is a known and accepted rounding.
     """
     lines = text.splitlines()
     output = []
@@ -413,9 +424,14 @@ def strip_non_prose(text: str) -> str:
         # Drop table rows (lines starting with |)
         if stripped.startswith("|"):
             continue
+        # Drop blockquotes (illustrative before/after examples)
+        if stripped.startswith(">"):
+            continue
         # Drop horizontal rules
         if re.match(r"^[-*_]{3,}$", stripped):
             continue
+        # Collapse inline code spans to a neutral one-word placeholder
+        line = re.sub(r"`[^`]+`", "codespan", line)
         output.append(line)
     return "\n".join(output)
 

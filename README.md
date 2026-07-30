@@ -1,120 +1,99 @@
 # Humanizer
 
-A Claude Code skill that removes signs of AI-generated writing from text, making it sound more natural and human.
+A Claude Code skill that strips the signs of AI-generated writing out of prose.
 
-**Current version: 2.7.3.** The canonical rule set is in `SKILL.md` — this README is an orientation guide only. If this file and `SKILL.md` conflict, `SKILL.md` wins.
+Surface cleanup is the easy half. Anyone can delete em dashes and swap out `delve`. The tells that actually survive editing live in structure and cadence: paragraphs you could reorder without breaking the argument, colon-lead cascades, every sentence landing at 20 words, tidy summary endings that tie a bow. This skill is organized around fixing those first.
 
-## Installation
+**Current version: 2.8.0.** `SKILL.md` is the canonical rule set. If this README and `SKILL.md` disagree, `SKILL.md` wins.
 
-### Recommended (clone directly into Claude Code skills directory)
+## What this is honest about
+
+Editing AI-drafted text does not beat a trained classifier. A controlled run of six rewrites across two genres, scored against GPTZero Model 4.6b, held at 100% AI on every single one, including rewrites where sentence-level edits had driven the per-sentence panel mostly clean. The same author's genuinely human-written essay scored 94% human on the same oracle with no editing at all.
+
+The variable that moves a detector's verdict is authorship direction, and editing cannot change it.
+
+So this is a writing-quality tool. Every rule in it also makes prose less generic, which is the reason to use it. If you came looking for something that launders AI output past a plagiarism gate on graded work, this will not do that, and `SKILL.md` says so in more detail than you probably want. See the Honest Limits section there.
+
+## Install
 
 ```bash
-mkdir -p ~/.claude/skills
-git clone https://github.com/blader/humanizer.git ~/.claude/skills/humanizer
+git clone https://github.com/keez97/humanizer.git ~/.claude/skills/humanizer
 ```
 
-### Manual install/update (only the skill file)
+That is the whole install. `score.py` is stdlib-only, so there is nothing to pip install and no virtualenv to create.
 
-If you already have this repo cloned (or you downloaded `SKILL.md`), copy the skill file into Claude Code's skills directory:
+To update:
 
 ```bash
-mkdir -p ~/.claude/skills/humanizer
-cp SKILL.md ~/.claude/skills/humanizer/
+git -C ~/.claude/skills/humanizer pull
 ```
 
 ## Usage
 
-Invoke via the slash command:
-
 ```
-/humanizer           # full mode — external deliverables, essays, published body copy
-/humanizer light     # light mode — analytical docs (memos, case studies, technical docs)
-/humanizer detect    # flag-only audit — no rewrite; severity-grouped tell report
+/humanizer           # full mode: essays, cover letters, published body copy
+/humanizer light     # light mode: memos, case studies, technical docs
+/humanizer detect    # flag-only audit, no rewrite
 ```
 
-Optionally pass a writing sample in `full` mode ("match my voice — here's a post") for sample-based voice calibration.
+In `full` mode you can pass a writing sample ("match my voice, here's a post") and it will calibrate against your own sentence-length variance, vocabulary register, and punctuation habits rather than imposing a default voice.
 
-Do NOT use on: chat replies, status updates, tables, code, commit messages, JSONL/YAML, internal artifacts (state.md, plans, handoffs), frontend chrome.
+Do not run it on chat replies, tables, code, commit messages, YAML, or internal artifacts like plans and handoffs. It will corrupt structure that parsers depend on.
 
-**When in doubt, use `/humanizer light`** — it scrubs surface tells without stripping confidence-label hedging or imposing first-person voice.
+**When in doubt, use `light`.** It scrubs surface tells without stripping confidence hedging or forcing first person into a document that should not have it.
 
-## Mode tiering
+### Modes
 
-| Mode | Active rules | Use for |
+| Mode | Active | Use for |
 |---|---|---|
-| `full` | Every tell (Layers A–D), the honest-limit detection-resistance layer, soul/imperfection mandate, full self-scoring battery | Graded essays, cover letters, exec summaries for human readers, published body copy, method narratives |
-| `light` | Banned vocab (C2) + em-dash (C5) + signpost density (C8) only. De-hedging suppressed (tell D1 is OFF) | Analytical docs — consulting memos, case studies, technical docs, validation scorecards. Preserves `speculative`/`inferred` confidence labels. |
-| `off` | Skill not applied | Chat, tables, code, internal artifacts |
-| `detect` | Flag-only — no rewrite. Reports tells grouped by severity (P0/P1/P2) with a definitely-fix vs judgment-call verdict per flag | Auditing without altering: someone else's text, published content, or a pipeline/gate check |
+| `full` | Every tell (Layers A through E), the statistical battery, the soul/imperfection mandate | Graded essays, cover letters, exec summaries, published body copy |
+| `light` | Banned vocab, em dash, signpost density. De-hedging is OFF | Consulting memos, case studies, technical docs |
+| `off` | Nothing | Chat, tables, code, internal artifacts |
+| `detect` | Flag-only, grouped P0/P1/P2 with a fix-vs-judgment-call verdict per flag | Auditing text you are not going to rewrite |
 
-The de-hedging suppression in `light` mode is a binding invariant, not a style preference. The source-quality protocol requires confidence labels to survive on analytical deliverables.
+De-hedging stays suppressed in `light` mode as a binding invariant, not a preference. Analytical deliverables need their `speculative` and `inferred` labels to survive the pass.
 
-## Self-scoring script
-
-After the editing passes, run the mechanical gate before delivering:
+## The scorer
 
 ```bash
-python3 ~/.claude/skills/humanizer/score.py <draft-file> --mode full
-python3 ~/.claude/skills/humanizer/score.py <draft-file> --mode light
+python3 ~/.claude/skills/humanizer/score.py <draft> --mode full
+python3 ~/.claude/skills/humanizer/score.py <draft> --mode light
+python3 ~/.claude/skills/humanizer/score.py <draft> --grok    # add Grok idiolect vocab
+cat draft.md | python3 score.py --mode light                  # reads stdin too
 ```
 
-Ship gate: ALL HARD checks pass AND fewer than 3 soft gates fail. Two-pass cap — do not iterate beyond two battery cycles. In `--mode light`, only checks #6 (banned vocab), #7 (em-dash), #8 (signpost density) are active.
+Fourteen checks. Sentence-length coefficient of variation, paragraph variance, vocabulary tiers, em dashes, signpost density, tricolon saturation, negation reversal, hedge stacking, and a contractions floor. Exit code 0 for pass, 1 for fail, so you can gate a pipeline on it.
 
-## What's new in v2.7.0
+Ship gate: every HARD check passes and fewer than three soft checks fail. Two-pass cap. Looping a draft against the battery more than twice over-fits to the battery itself, which becomes its own signature.
 
-Capabilities harvested faithfully from other open-source humanizer skills (rules incorporated as-written, only refitted to this skill's ID scheme; verified against each source verbatim):
+Two checks (colon-restatement and perplexity-anchor coverage) need judgment and are deliberately left to the model rather than faked in regex.
 
-- **New structural tells:** reshuffleable paragraphs (A6, from Aboudjem P38), treadmill/restatement density (B16, P43), symbolic gloss (B1, P40), "Whether…" range-closers + infomercial hooks (B9, P39/P41), noun-phrase cycling (B7, P31), erratic inline bolding (C6, P42), "does more than X; it Y" (B4, slopbuster).
-- **`detect` mode** — flag-only audit, no rewrite; tells grouped P0/P1/P2 with a definitely-fix vs judgment-call verdict (from conorbronsdon).
-- **Voice calibration** — optional `full`-mode sample matching (match the sample's *variance*, not just its mean; never upgrade vocabulary), with a `light`-mode carve-out (from blader + humanink).
-- **System guardrails:** cluster-not-isolated flagging (blader), quoted/illustrative-text exemption (conorbronsdon), patch-vs-rebuild threshold (conorbronsdon), and a "know your own fingerprint" note (Claude's signature cluster, from humanink).
+## What changed in 2.8.0
 
-## What's new in v2.6.0
+Synced against the current version of Wikipedia's [Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing). Two of these fix rules that were wrong, not merely incomplete.
 
-- **Full restructure / dedup.** The accreted ~64 numbered rules (many of which covered the same tell at instance-level *and* density-level) are consolidated into one deduplicated set of tells, grouped by the layer you fix them at: Architecture (A) → Sentence & rhetoric (B) → Lexical & surface (C) → Hedging & distribution (D). ~50% shorter, no operative content lost. SKILL.md is the canonical rule set.
-- **Honest Limits (detection-resistance) promoted to the top.** A 2026-06-12 controlled study (GPTZero Model 4.6b oracle) established that editing AI-drafted text does not beat a trained classifier — the document verdict is driven by authorship *direction*, which editing can't change. The skill is now framed as a quality tool, not a detector-evasion tool. The procedural-genre floor and the integrity routing are stated explicitly.
-- **Layer D caveat.** The burstiness/CV target can push *up* the AI score on analytical/technical text; the honest-limit findings govern when they conflict with the distribution battery.
+- **Vocabulary is now era-tiered.** The overused word set moves. `delve` was the signature ChatGPT word in 2023, faded through 2024, and fell off sharply in 2025. The current cluster is different and much smaller. A flat banlist calibrated to 2023 hard-fails drafts over dead vocabulary while missing what current models actually overuse.
+- **The banlist is split by evidence.** Tier 1 is corroborated by at least one cited study and gates HARD. Tier 2 is observed-but-unproven and gates soft. Fifteen words were previously hard-gated with no study behind them, and a human consultant writes `leverage` and `holistic` without any help from a model.
+- **Hedging rule reversed on single hedges.** Reinhart et al. (PNAS) found that hedging qualifiers, intensifiers, and ordinary wordy constructions (`in order to`, `the fact that`) occur *more* in human writing than in LLM output. Stripping them drives prose toward the machine baseline. The rule now targets stacking (`may potentially`) rather than hedging itself.
+- **Same correction for plain superlatives.** `One of the best` and `was the first` are human signals. The tell is unearned significance on a routine fact, not confidence.
+- **New Layer E: ineffective indicators.** What not to flag. Perfect grammar, mixed formal/casual register, "robotic" prose, academic vocabulary, transition words in isolation. Over-flagging has a real cost, and humans are close to random chance at this: one study measured 57% recognition of AI text against 64% for human text.
+- **Model idiolects.** Claude, ChatGPT, Gemini, and Grok have measurably different fingerprints. Knowing the source narrows where to look.
+- **Scorer fix:** vocabulary is stored as lemmas now and inflected at match time. The old exact matching silently missed `showcases`, `underscored`, `bolstered`, and `aligned with`.
 
-## What carried over (v2.5.0 foundations)
+## Attribution
 
-- Detection-aware statistical layer (tells D1–D6 / battery): sentence-length CV, paragraph-length variance, signpost density, tricolon saturation, negation-reversal density, hedge density, lexical banlist (29 words), em-dash hard gate, contractions alibi floor.
-- Mode tiering (`full` / `light` / `off`); light mode is the default for analytical deliverables, with de-hedging suppressed as a binding invariant.
-- Five-pass workflow: architecture → sentence → lexical → audit → read-aloud. Order matters.
-- Self-scoring battery (`score.py`) as ship gate with HARD/soft distinction.
+This is an independent rewrite descended from [blader/humanizer](https://github.com/blader/humanizer) by Siqi Chen, MIT licensed. The two have diverged: as of this version they share six lines of text, all of them headings and frontmatter keys. The layer taxonomy, the mode system, the statistical battery, and all of the Python are written here. The debt is real anyway, and that project is worth reading on its own.
 
-## Tells at a glance
+The underlying pattern catalogue originates with Wikipedia's [Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing), maintained by WikiProject AI Cleanup, available under CC BY-SA. `SKILL.md` lists the individual studies it relies on.
 
-The deduplicated tells live in four fix-order layers. Full definitions, before/after examples, density thresholds, and mode flags are in `SKILL.md`.
+## Repo contents
 
-| Layer | IDs | What it catches |
-|---|---|---|
-| A — Architecture | A1–A6 | Source-review framing, patterned issue paragraphs / list uniformity, roadmap sentences, formulaic "challenges" sections, abstract framing-tissue concentration, reshuffleable paragraphs |
-| B — Sentence & rhetoric | B1–B16 | Significance inflation & symbolic gloss, -ing pseudo-depth, copula avoidance, negative parallelism, rule of three, false ranges, synonym & noun-phrase cycling, frame-then-pivot, tidy closers/slogans/hooks, stacked declaratives & length monotony, clever inversions, performative similes, tidy concessions, colon-restatement & cascades, opening-word repetition, treadmill/restatement |
-| C — Lexical & surface | C1–C11 | AI vocabulary, hard banlist (29 words), categorical pronouncements, nominalizations/coined compounds, em dash, curly quotes/boldface/erratic bolding/emojis, filler, signpost & connective density, promotional language, vague attributions, notability name-dropping |
-| D — Hedging & distribution | D1–D6 | Hedging (instance/numeric/density — suppressed in light), sentence-length CV, paragraph-length variance, perplexity/specificity anchors, framework-mapping enumeration, contractions alibi floor |
-| Communication artifacts | — | Chatbot artifacts, knowledge-cutoff disclaimers, sycophantic tone, generic positive conclusions |
-| Cross-cutting | — | Cluster-not-isolated flagging, quoted/illustrative-text exemption, patch-vs-rebuild threshold, Claude-fingerprint note, optional voice calibration |
-
-## References
-
-- [Wikipedia: Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) — primary source
-- [WikiProject AI Cleanup](https://en.wikipedia.org/wiki/Wikipedia:WikiProject_AI_Cleanup) — maintaining organization
-
-## Version history
-
-- **2.7.3** — Negation-reversal (#10) promoted to a **HARD** gate in `full` mode — definitional negation ("X, not Y" / "X isn't A. It's B.") can no longer pass silently. Single legitimate uses are still fine (threshold ≤1/500w); denser use blocks. `light` mode still skips it, so the pre-commit gate is unaffected.
-- **2.7.2** — `score.py` negation-reversal check (#10) now catches the cross-sentence definitional-negation form ("X isn't a lapse. It's B." split across a period), which the inline-only regex was blind to. Tight article list keeps false positives at zero on ordinary negations. Still a soft gate.
-- **2.7.1** — Patterns harvested from a live GPTZero 4.6b adversarial test: B17 (formal phrasing of a personal stance → "Impersonal Tone"), B18 (smooth multi-clause sentences → "Mechanical Transitions"), and B4 escalated for titles/headings ("X, Not Y" → "Contrast Phrasing"). Honest Limits gains a second live confirmation: a clean battery-passing essay scored 100% AI with 7 sentences flagged human — panel and verdict are decoupled.
-- **2.7.0** — Capability harvest from peer OSS humanizer skills (blader, conorbronsdon/avoid-ai-writing, Aboudjem/humanizer-skill, sirambrosio/humanink), incorporated faithfully and verified against each source. New tells (A6, B16, + enrichments to B1/B4/B7/B9/C6), `detect` mode, optional voice calibration, and cross-cutting guardrails (cluster gate, quoted-source exemption, patch-vs-rebuild, Claude fingerprint). Battery and modes' core contract unchanged.
-- **2.6.0** — Detection-resistance layer promoted to top (honest limits of editing AI-drafted text vs. trained classifiers; procedural-genre floor; integrity routing). Full restructure: ~64 instance+density rules deduplicated into one tell set across four fix-order layers (A/B/C/D); ~50% shorter, no operative content lost. SKILL.md is canonical; battery and modes unchanged.
-- **2.5.0** — Statistical-distribution layer, mode tiering (full/light/off), self-scoring battery (`score.py`), analytical/argumentative + structural + rhetorical-craft patterns, over-humanizing trap guardrails, four-pass workflow
-- **2.3.0** — Added pattern #25: hyphenated word pair overuse
-- **2.2.0** — Added final "obviously AI generated" audit + second-pass rewrite prompts
-- **2.1.1** — Fixed pattern #18 example (curly quotes vs straight quotes)
-- **2.1.0** — Added before/after examples for all 24 patterns
-- **2.0.0** — Complete rewrite based on raw Wikipedia article content
-- **1.0.0** — Initial release
+| File | What it is |
+|---|---|
+| `SKILL.md` | The canonical rule set. Everything else is support. |
+| `score.py` | The scoring battery. Stdlib only. |
+| `perplexity.py`, `binoculars.py` | Local detector-metric experiments. Kept as infrastructure, and documented in `SKILL.md` as *not* faithful proxies for how modern detectors behave. They need PyTorch if you want to run them. |
 
 ## License
 
-MIT
+MIT. See `LICENSE`.

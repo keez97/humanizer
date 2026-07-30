@@ -337,8 +337,10 @@ Broader-context inflation is characteristic of ChatGPT and Grok specifically —
 Run the mechanical gate before emitting any deliverable:
 
 ```
-python3 /Users/karimatari/.claude/skills/humanizer/score.py <draft> --mode <full|light>
+python3 ~/.claude/skills/humanizer/score.py <draft> --mode <full|light>
 ```
+
+`score.py` is stdlib-only — no install step, no dependencies. If the skill lives elsewhere, use that path instead; nothing in the script assumes a location.
 
 **Ship-eligibility:** ALL HARD gates pass AND ≤2 soft gates fail. 3+ soft fails = statistically over-smooth; revise. **Two-pass cap** (see Governing Principle 4). In `--mode light`, only #6/#7/#8 are active; all variance/hedge checks are skipped.
 
