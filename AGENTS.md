@@ -11,7 +11,7 @@ A Claude Code skill plus a scoring script. Two artifacts matter:
 
 - **`references/`** holds material the agent loads on demand: the detector study, the worked example, the source list, and voice calibration. Splitting these out is deliberate: `SKILL.md` is read in full on every invocation, so anything not needed to edit a sentence belongs here.
 
-`README.md` is for humans. `perplexity.py` and `binoculars.py` are retained experiments, documented in `references/DETECTION-LIMITS.md` as *not* faithful proxies for modern detectors. Do not present them as working detection.
+`README.md` is for humans. `perplexity.py` and `binoculars.py` are working model-based scorers, gated behind an optional PyTorch install (`requirements.txt`). They measure perplexity, the axis `score.py` structurally cannot reach. Their per-sentence rankings are useful; their document verdicts do not track commercial detectors, per `references/DETECTION-LIMITS.md` finding 3. Present them accurately in both directions: neither dismiss them as dead experiments nor claim they predict what a detector will say.
 
 **Frontmatter is spec-compliant and should stay that way.** `SKILL.md` follows the [Agent Skills](https://agentskills.io) open standard: only `name`, `description`, `license`, and `metadata` are set. Version lives at `metadata.version`, not top level. Do not add `allowed-tools` back: the spec marks it experimental with varying support across agents, and this skill is meant to run outside Claude Code. Validate with `npx skills-ref validate .`.
 

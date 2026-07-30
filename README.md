@@ -72,6 +72,26 @@ Ship gate: every HARD check passes and fewer than three soft checks fail. Two-pa
 
 Two checks (colon-restatement and perplexity-anchor coverage) need judgment and are deliberately left to the model rather than faked in regex.
 
+## The optional model-based scorers
+
+`score.py` measures structure and lexicon. It cannot see *perplexity*, which is the axis trained detectors actually score: how predictable each token is under a reference model, and how much that predictability varies sentence to sentence. Two scripts fill that gap. Both work, and both need PyTorch:
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+.venv/bin/python perplexity.py <draft>
+.venv/bin/python binoculars.py <draft>
+```
+
+First run downloads weights (~500 MB for GPT-2, ~2 GB for the Qwen pair).
+
+**`perplexity.py`** loads GPT-2 and reports document perplexity, per-sentence perplexity, and burstiness, ranking sentences from most to least predictable.
+
+**`binoculars.py`** implements Binoculars ([Hans et al., 2024](https://arxiv.org/abs/2401.12070)), dividing log-perplexity under an observer model by cross-perplexity against a sibling performer model. Content that surprises both models cancels out, which matters in number-heavy writing where a figure like `$320m` inflates raw perplexity no matter who wrote it.
+
+**Use them for the ranking, not the verdict.** The controlled study in [references/DETECTION-LIMITS.md](references/DETECTION-LIMITS.md) tested both against GPTZero and neither reproduced its document-level judgment. GPT-2 rated the target text more human than a 1946 Orwell passage. Do not build a rewrite loop that optimizes against these numbers and assume the result transfers to a commercial detector, because on the available evidence it does not.
+
+What they are good for is finding the flattest lines in your own draft. Run one on a paragraph and the bottom of the list is where the prose has gone predictable, which is the same thing D2 and D4 are reaching for by proxy. That signal is real and local even though the absolute verdict does not travel.
+
 ## Portability
 
 `SKILL.md` conforms to the [Agent Skills](https://agentskills.io) open standard, which a good number of agents now read: Cursor, Gemini CLI, OpenAI Codex, GitHub Copilot, VS Code, Goose, OpenCode, Roo Code, Amp, and others. The frontmatter sets only `name`, `description`, `license`, and `metadata`, so nothing in it is tied to one product. `allowed-tools` is deliberately absent; the spec marks it experimental with support that varies by agent.
@@ -94,7 +114,8 @@ The underlying pattern catalogue originates with Wikipedia's [Signs of AI writin
 | `.claude-plugin/plugin.json` | Plugin manifest, so the repo can be loaded as a Claude Code plugin as well as a plain skill. |
 | `score.py` | The scoring battery. Stdlib only. |
 | `references/` | Material loaded on demand rather than on every invocation: the detector study, a worked example, the source list, voice calibration. |
-| `perplexity.py`, `binoculars.py` | Local detector-metric experiments. Kept as infrastructure, and documented in `references/DETECTION-LIMITS.md` as *not* faithful proxies for how modern detectors behave. They need PyTorch if you want to run them. |
+| `perplexity.py`, `binoculars.py` | Optional model-based scorers. They work; see below. Require PyTorch. |
+| `requirements.txt` | Deps for those two only. `score.py` needs nothing. |
 
 ## License
 

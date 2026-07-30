@@ -1,0 +1,10 @@
+# Optional. Only needed for perplexity.py and binoculars.py.
+# score.py, the main battery, is stdlib-only and needs none of this.
+#
+#   python3 -m venv .venv && .venv/bin/pip install -r requirements.txt
+#
+# First run downloads model weights from HuggingFace:
+#   perplexity.py  gpt2                  ~500 MB
+#   binoculars.py  Qwen2.5-0.5B x2       ~2 GB
+torch>=2.0
+transformers>=4.40
