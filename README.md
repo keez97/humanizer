@@ -12,7 +12,7 @@ Editing AI-drafted text does not beat a trained classifier. A controlled run of 
 
 The variable that moves a detector's verdict is authorship direction, and editing cannot change it.
 
-So this is a writing-quality tool. Every rule in it also makes prose less generic, which is the reason to use it. If you came looking for something that launders AI output past a plagiarism gate on graded work, this will not do that, and `SKILL.md` says so in more detail than you probably want. See the Honest Limits section there.
+So this is a writing-quality tool. Every rule in it also makes prose less generic, which is the reason to use it. [references/DETECTION-LIMITS.md](references/DETECTION-LIMITS.md) has the full study, including the genres where the floor is irreducible.
 
 ## Install
 
@@ -71,28 +71,6 @@ Fourteen checks. Sentence-length coefficient of variation, paragraph variance, v
 Ship gate: every HARD check passes and fewer than three soft checks fail. Two-pass cap. Looping a draft against the battery more than twice over-fits to the battery itself, which becomes its own signature.
 
 Two checks (colon-restatement and perplexity-anchor coverage) need judgment and are deliberately left to the model rather than faked in regex.
-
-## What changed in 2.9.0
-
-- **A no-fabrication rule, as governing principle 8.** The rewrite must not contain a fact, name, number, date, quote, or citation absent from the source, and a fabrication counts as a defect even when it reads better than the vague original. This closes a hole the skill itself opened: rule D4 tells the model to add a concrete anchor to any paragraph that lacks one, which is an open invitation to invent a plausible statistic. D4 now carries an explicit warning, and the audit pass asks a second, separate question about fabricated specifics. Separate on purpose, because an invented number is invisible to a style audit: it looks exactly like what the style audit asked for.
-- **A7, fragmented headers.** A heading followed by a line that just restates the heading before the real content starts.
-- **A8, diff-anchored writing.** Prose narrating a change instead of describing the thing as it stands. Common in docs and code comments written from a diff.
-- **B11 extended** with aphorism formulas: `X is the Y of Z`, `the language of`, `the currency of`, `X becomes a trap`.
-- **B9 extended** with fake-candid openers: `Honestly?`, `Look,`, `Real talk`, `Let's be honest`.
-
-Patterns A7, A8 and the two watch-lists were ported from [blader/humanizer](https://github.com/blader/humanizer) v2.9.x, as was the no-fabrication rule.
-
-## What changed in 2.8.0
-
-Synced against the current version of Wikipedia's [Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing). Two of these fix rules that were wrong, not merely incomplete.
-
-- **Vocabulary is now era-tiered.** The overused word set moves. `delve` was the signature ChatGPT word in 2023, faded through 2024, and fell off sharply in 2025. The current cluster is different and much smaller. A flat banlist calibrated to 2023 hard-fails drafts over dead vocabulary while missing what current models actually overuse.
-- **The banlist is split by evidence.** Tier 1 is corroborated by at least one cited study and gates HARD. Tier 2 is observed-but-unproven and gates soft. Fifteen words were previously hard-gated with no study behind them, and a human consultant writes `leverage` and `holistic` without any help from a model.
-- **Hedging rule reversed on single hedges.** Reinhart et al. (PNAS) found that hedging qualifiers, intensifiers, and ordinary wordy constructions (`in order to`, `the fact that`) occur *more* in human writing than in LLM output. Stripping them drives prose toward the machine baseline. The rule now targets stacking (`may potentially`) rather than hedging itself.
-- **Same correction for plain superlatives.** `One of the best` and `was the first` are human signals. The tell is unearned significance on a routine fact, not confidence.
-- **New Layer E: ineffective indicators.** What not to flag. Perfect grammar, mixed formal/casual register, "robotic" prose, academic vocabulary, transition words in isolation. Over-flagging has a real cost, and humans are close to random chance at this: one study measured 57% recognition of AI text against 64% for human text.
-- **Model idiolects.** Claude, ChatGPT, Gemini, and Grok have measurably different fingerprints. Knowing the source narrows where to look.
-- **Scorer fix:** vocabulary is stored as lemmas now and inflected at match time. The old exact matching silently missed `showcases`, `underscored`, `bolstered`, and `aligned with`.
 
 ## Portability
 
