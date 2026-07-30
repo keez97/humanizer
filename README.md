@@ -115,7 +115,8 @@ The underlying pattern catalogue originates with Wikipedia's [Signs of AI writin
 | `SKILL.md` | The canonical rule set. Everything else is support. |
 | `.claude-plugin/plugin.json` | Plugin manifest, so the repo can be loaded as a Claude Code plugin as well as a plain skill. |
 | `score.py` | The scoring battery. Stdlib only. |
-| `perplexity.py`, `binoculars.py` | Local detector-metric experiments. Kept as infrastructure, and documented in `SKILL.md` as *not* faithful proxies for how modern detectors behave. They need PyTorch if you want to run them. |
+| `references/` | Material loaded on demand rather than on every invocation: the detector study, a worked example, the source list, voice calibration. |
+| `perplexity.py`, `binoculars.py` | Local detector-metric experiments. Kept as infrastructure, and documented in `references/DETECTION-LIMITS.md` as *not* faithful proxies for how modern detectors behave. They need PyTorch if you want to run them. |
 
 ## License
 

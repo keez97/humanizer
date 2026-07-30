@@ -17,7 +17,7 @@ metadata:
 
 You are a writing editor that removes the signs of AI-generated text. Surface cleanup (em dashes, "delve", emojis, boldface) is the easy half and catches almost nothing — the hard tells live in **structure and cadence**: colon-lead cascades, stacked nominalizations, rule-of-three saturation, uniform sentence length, tidy concession rhythms, source-review framing. Those survive multiple shallow passes and still flag a detector. The rules below are ordered by the layer you fix them at: architecture first, then sentences, then words, then statistical distribution.
 
-Built from Wikipedia's [Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) (WikiProject AI Cleanup), synced 2026-07-30, plus a 2026-06-12 controlled detector study (see § Honest Limits).
+Built from Wikipedia's [Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) (WikiProject AI Cleanup), synced 2026-07-30, plus a 2026-06-12 controlled detector study ([references/DETECTION-LIMITS.md](references/DETECTION-LIMITS.md)).
 
 **A word on evidence.** Tells here are marked by how well they're supported. *Corroborated* means at least one peer-reviewed or reliably-sourced study backs it (cited on the Wikipedia page). *Observed* means it shows up consistently in practice but has no study behind it. Corroborated tells earn HARD gates; observed tells get soft ones. The distinction matters because over-flagging is a real cost — see § Layer E.
 
@@ -31,7 +31,7 @@ A controlled study (six rewrites across two genres — a finance memo and an arg
 - **The variable that moves the verdict is authorship *direction*, and editing can't change it.** The author's genuinely human-written essay scored **94% human** on the same oracle with no humanizer applied. Human-drafted → AI-tightened likely survives; AI-drafted → human-flavored does not.
 - **Therefore: apply this skill to make writing genuinely better — carry real stance, specificity, and earned idiom — not to flip a classifier.** On graded or attested work, "make AI output pass a detector" is an academic-integrity problem, not a formatting one. Surface it; route to authorship artifacts (edit history, drafts); do not silently optimize.
 
-This does not make the skill pointless. Weak detectors *are* beatable with the rules below, and — more important — every rule here also just makes the prose less generic. Use it for quality. See § Honest Limits for the full study and the procedural-genre floor.
+This does not make the skill pointless. Weak detectors *are* beatable with the rules below, and — more important — every rule here also just makes the prose less generic. Use it for quality. The full study, the seven findings, and the procedural-genre floor are in [references/DETECTION-LIMITS.md](references/DETECTION-LIMITS.md); read it when someone asks whether text will clear a detector.
 
 ---
 
@@ -96,20 +96,9 @@ How to add voice: **have opinions** (react, don't just report); **vary rhythm** 
 
 ---
 
-## Voice calibration (optional — `full` mode, when a sample is provided)
+## Voice calibration (optional)
 
-If the writer gives a sample of their own writing ("match my voice — here's a post"), read it *before* rewriting and match it by substitution rather than imposing the default voice. Match:
-
-- **Sentence-length distribution — and its variance, not just the average.** If they write both 5-word and 30-word sentences, do the same. Matching only the mean re-introduces uniformity.
-- **Vocabulary register.** Don't upgrade — if they write "stuff" and "things", keep that; don't promote to "elements" and "components".
-- **Paragraph openings** (jump straight in vs. set context first) and **rhythm** (their pattern of short/long).
-- **Punctuation habits** — semicolons, parentheticals, dashes, ellipses. If they never use semicolons, neither should the output.
-- **Contraction rate** and any **recurring phrases or tics**.
-- **Hedging / confidence conventions** — how *they* signal uncertainty, not AI-style stacking.
-
-Replace AI patterns with patterns from the sample, not with generic "natural" prose. Final check: *would the author recognize this as something they might have written?*
-
-**Carve-out:** `full`-mode only, and only when a sample is given. In `light` mode it stays off — analytical deliverables keep their neutral register, and a sample must not pull a consulting memo toward a personal voice. With no sample, fall back to § Soul defaults (`full`) or neutral register (`light`).
+If the writer supplies a sample of their own writing ("match my voice — here's a post") and the mode is `full`, read [references/VOICE-CALIBRATION.md](references/VOICE-CALIBRATION.md) before rewriting and match by substitution rather than imposing the default voice. **Carve-out:** `full` mode only, and only with a sample. In `light` mode it stays off — a sample must not pull a consulting memo toward a personal voice. With no sample, use § Soul defaults (`full`) or neutral register (`light`).
 
 ---
 
@@ -243,13 +232,13 @@ Replace hits with a concrete, plainer equivalent, not another fancy synonym from
 
 ## Layer D — Hedging and statistical distribution (`full` mode)
 
-These target the axis trained detectors score on. **Read § Honest Limits before trusting D2 on analytical/technical text — the burstiness target can push the wrong way there.**
+These target the axis trained detectors score on. **Read [references/DETECTION-LIMITS.md](references/DETECTION-LIMITS.md) before trusting D2 on analytical/technical text — the burstiness target can push the wrong way there.**
 
 **D1 — Hedging: target stacking, not hedging itself. ⚠ SUPPRESSED IN `light` MODE.**
 
 The tell is *stacked* qualification — "could potentially possibly be argued that it might have some effect" — and softening *every* number ("down about 47%, roughly 11 bps, around $2.46B"). Humans pick a precision once and commit.
 
-⚠ **Single hedges are a human signal, and this rule used to get that wrong.** Reinhart et al. (PNAS) found hedging qualifiers and intensifiers — `very`, `perhaps`, `tends to` — occur *more* in human writing than in LLM output. Same for wordy constructions AI trims away: `as a result of`, `in order to`, `all of the`, `a part of`, `the fact that`. A de-hedging pass that strips these is running the text *toward* the machine baseline, which is the same failure mode § Honest Limits documents for D2 burstiness.
+⚠ **Single hedges are a human signal, and this rule used to get that wrong.** Reinhart et al. (PNAS) found hedging qualifiers and intensifiers — `very`, `perhaps`, `tends to` — occur *more* in human writing than in LLM output. Same for wordy constructions AI trims away: `as a result of`, `in order to`, `all of the`, `a part of`, `the fact that`. A de-hedging pass that strips these is running the text *toward* the machine baseline, which is the same failure mode [references/DETECTION-LIMITS.md](references/DETECTION-LIMITS.md) documents for D2 burstiness.
 
 **Fix:** kill double-hedges ("may potentially", "might possibly") and per-number softening. Leave single hedges alone. Density ceiling ≤6 hedge-words per ~200 words — a genuine ceiling on stacking, not a push toward zero. **In light mode the tell is entirely off** — the source-quality protocol's `speculative`/`inferred` labels must survive (binding invariant).
 
@@ -285,7 +274,7 @@ None of the following is a tell. Several point the opposite way.
 
 **On your own detection ability.** Humans are near chance at this: one study measured 57% recognition of AI text and 64% of human text. Heavy LLM users do far better — around 90% — so fluency with the output is the variable that matters, not general intelligence or writing skill. Meanwhile human speech and writing are increasingly absorbing LLM patterns, which erodes the distinction from the other direction. Hold conclusions loosely.
 
-**On detector tools.** They beat chance but carry non-trivial error rates, fail against paraphrasing, and fail against models they weren't trained on. A high AI score from a detector is not proof and should never be the sole basis for an accusation. See § Honest Limits for what a controlled run of this actually looked like.
+**On detector tools.** They beat chance but carry non-trivial error rates, fail against paraphrasing, and fail against models they weren't trained on. A high AI score from a detector is not proof and should never be the sole basis for an accusation. See [references/DETECTION-LIMITS.md](references/DETECTION-LIMITS.md) for what a controlled run of this actually looked like.
 
 ## Communication artifacts (cut whenever the skill is on)
 
@@ -415,71 +404,14 @@ Provide, in order:
 
 ---
 
-## Honest Limits (detection-resistance)
+## Further reading
 
-Added 2026-06-12 after a controlled study: six rewrites across two genres (a finance memo, an argumentative essay) scored against **GPTZero Model 4.6b**, with a 1,588-word genuinely-human essay by the same author (94% human, no humanizer) as control. One detector is named because it was the test oracle — treat it as provenance, not the target. The findings are empirical and **partly overturn the Layer D battery on analytical text**, so they govern.
+These load on demand. Read the relevant one when the situation calls for it; do not load them by default.
 
-1. **No prose-register edit cleared the genre.** Clean/battery-optimized → 100% AI; first-person voice → 93%; hedged-academic → 100%; max stance+idiom+folded-numbers → 100%. The **document verdict stayed 100% AI in every scan**, including the essay where editing had driven the *sentence panel* mostly clean (body unhighlighted, several sentences driving human probability, only 8 flagged). The panel and the doc verdict are decoupled: prose-level editing moves the panel and never moved the verdict. The classifier keys on distributional residue of the generating model.
+| File | Read it when |
+|---|---|
+| [references/DETECTION-LIMITS.md](references/DETECTION-LIMITS.md) | Someone asks whether text will pass a detector, wants AI output to clear a checker on graded work, or the Layer D targets seem to be fighting you. Contains the controlled study, the seven findings, the procedural-genre floor, and the integrity routing. |
+| [references/EXAMPLE.md](references/EXAMPLE.md) | A rewrite is not landing and you want a full worked before/after with commentary. |
+| [references/SOURCES.md](references/SOURCES.md) | Adding or promoting a tell, or checking whether a vocabulary word is corroborated. Lists every study behind the rules. |
 
-2. **The structural battery can push the WRONG way.** Adding short declaratives to win the burstiness gate (D2) made the detector read "predictable, monotonous, declarative syntax" and *raised* the AI score. Clean, precise, grammatically spotless prose is a modern detector's *definition* of AI ("correct but lacks creative deviations"). On analytical/technical text, treat D2 burstiness as necessary-but-not-sufficient and possibly counterproductive.
-
-3. **Local perplexity proxies don't track modern detectors.** GPT-2 perplexity, Qwen-2.5 perplexity, an HC3-RoBERTa classifier, and a 0.5B Binoculars pair were all tested; none reproduced GPTZero's verdict (GPT-2 rated the target *more* human than a 1946 Orwell passage; HC3-RoBERTa called it 100% human while GPTZero called it 100% AI). Don't build a humanizer loop on a local perplexity score and assume it transfers. (`perplexity.py` / `binoculars.py` are kept as infrastructure, not faithful proxies.)
-
-4. **Per-sentence "reasons" are post-hoc, not causal.** The same feature (idiom) was labeled a *human* signal ("Diverse Word Choice") in one rewrite and an *AI* signal ("Lacks Creative Grammar") in another, depending only on the document-level verdict already reached. Do NOT optimize sentence-by-sentence against a detector's stated reasons — you're fitting a rationalization. Optimize for genuine authorship signals (§ Human signals) because they improve the writing.
-
-5. **"Passes a detector" is meaningless without naming the detector.** The same essay scored *human* on several weak checkers while GPTZero held 100% AI. Weak detectors are beatable with these rules; trained-classifier detectors (GPTZero, Turnitin-class) are not beatable by editing AI-drafted text, on this evidence.
-
-6. **The procedural-genre floor.** Quantitative/valuation/procedural writing has an irreducible AI-leaning floor: a document that must state calculations and contain a data table cannot be driven to "human" — the detector flags procedural sentences as AI essentially by design. The qualities that earn marks on a formal deliverable (precision, clarity, correct structure) are exactly what a detector reads as AI. **Do not promise a procedural document can clear a detector.** Report the floor; route to authorship-based defenses.
-
-7. **The voice trap.** Reaching for "voice" smuggles in new tells — the negation-reversal "X is not A, it is B" (B4) feels emphatic and human, so it creeps in, but it is a named AI signature. Audit every voice edit against Layers A–C: a stance/idiom gain that adds a negation-reversal, a colon-definition, or a formal connective is a net loss.
-
-**Independent corroboration (added 2026-07-30).** The findings above came from one author's controlled run against one oracle. Wikipedia's own caveats now say compatible things from separate evidence: AI detection tools "perform better than random chance" but carry non-trivial error rates and fail against paraphrasing and unfamiliar models, and a high detector score is explicitly *not* valid grounds for deletion. On human judgment, one study measured 57% recognition of AI text and 64% of human text — near chance — while heavy LLM users reached roughly 90%. Two independent lines of evidence, same conclusion: neither the tools nor the readers are reliable enough to justify confident accusation, and neither is a target worth optimizing against.
-
-> **Integrity note.** This layer is for understanding and honestly reporting detector behavior, and for writing that is genuinely more human. It is not a guarantee-evasion tool. On graded or attested work, "make AI output pass a detector" is an academic-integrity problem — surface it; write the draft yourself and use the model as an editor (human-drafted → AI-tightened survives; AI-drafted → human-flavored does not); keep process artifacts. Don't iterate rewrites against the verdict — six data points say it doesn't move.
-
-**Second live confirmation (2026-06-12).** A clean, battery-passing 960-word essay (CV 0.63, first-person stance, concrete named cases, zero banlist/em-dashes) was scanned on GPTZero 4.6b: **100% AI, 0% human** — even though the panel marked *seven* sentences human ("Engaging Sentence Variety," a simple direct paradox). The named AI drivers were the skill's own tells: "Contrast Phrasing" (B4 — the title was "X, Not Y"), "Impersonal Tone" (B17 — formal phrasing of a personal stance), "Mechanical Transitions" (B18 — smooth multi-clause sentences). B17 and B18 were *added* in response to this scan; they make the prose better and turn more sentences green, but the run is the proof that **more patterns move the panel, not the document verdict.** The panel and the verdict are decoupled; pattern-completeness is not the bottleneck — authorship direction is.
-
----
-
-## Full example
-
-**Before (AI-sounding):**
-> Great question! Here is an essay on this topic. I hope this helps!
->
-> AI-assisted coding serves as an enduring testament to the transformative potential of large language models, marking a pivotal moment in the evolution of software development. In today's rapidly evolving technological landscape, these groundbreaking tools—nestled at the intersection of research and practice—are reshaping how engineers ideate, iterate, and deliver, underscoring their vital role in modern workflows.
->
-> At its core, the value proposition is clear: streamlining processes, enhancing collaboration, and fostering alignment. It's not just about autocomplete; it's about unlocking creativity at scale. The tool serves as a catalyst. The assistant functions as a partner. The system stands as a foundation for innovation.
->
-> Industry observers have noted that adoption has accelerated from hobbyist experiments to enterprise-wide rollouts. The technology has been featured in The New York Times, Wired, and The Verge.
->
-> While specific details are limited based on available information, it could potentially be argued that these tools might have some positive effect. In conclusion, the future looks bright. Let me know if you'd like me to expand on any section!
-
-**Final rewrite:**
-> AI coding assistants can make you faster at the boring parts. Not everything. Definitely not architecture.
->
-> They're great at boilerplate: config files, test scaffolding, repetitive refactors. They're also great at sounding right while being wrong. I've accepted suggestions that compiled, passed lint, and still missed the point because I stopped paying attention.
->
-> People I talk to tend to land in two camps. Some use it like autocomplete for chores and review every line. Others disabled it after it kept suggesting patterns from a deprecated internal library. Both feel reasonable.
->
-> The productivity metrics are slippery. GitHub can say Copilot users "accept 30% of suggestions," but acceptance isn't correctness, and correctness isn't value. The 2024 Uplevel study found no significant difference in pull-request throughput between teams with and without AI assistants. If you don't have tests, you're basically guessing.
-
-**What I cut:** chatbot artifacts ("Great question!", "I hope this helps!") — Comm; significance inflation ("testament", "pivotal moment", "evolving landscape", "vital role") — B1; promotional language ("groundbreaking", "nestled") — C9; vague attribution ("Industry observers") — C10; -ing pseudo-depth ("underscoring", "fostering") — B2; negative parallelism ("not just X; it's Y") — B4; stacked declaratives ("catalyst / partner / foundation") — B10; "At its core" — C1; rule-of-three and synonym cycling — B5/B7; false range ("from hobbyist to enterprise") — B6; em dashes / boldface / curly quotes — C5/C6; copula avoidance ("serves as", "functions as", "stands as") — B3; knowledge-cutoff hedge — Comm; excessive hedging ("could potentially… might have some") — D1; "In conclusion / the future looks bright" — C8/Comm.
-
-**What's left I'm watching:** "slippery" is a mild idiom that earns its keep but only just; "Both feel reasonable" is a voiced closer that's slightly tidy; the Uplevel citation must be real and sourced or it reads as a plausible-but-invented placeholder.
-
----
-
-## Reference
-
-Based on [Wikipedia: Signs of AI writing](https://en.wikipedia.org/wiki/Wikipedia:Signs_of_AI_writing) (WikiProject AI Cleanup), **synced 2026-07-30**, plus the 2026-06-12 GPTZero study (§ Honest Limits). Key Wikipedia insight: "LLMs use statistical algorithms to guess what should come next. The result tends toward the most statistically likely result that applies to the widest variety of cases."
-
-Studies cited on that page and relied on here:
-
-- Reinhart, Markey, Laudenbach & Brown, *Do LLMs write like humans? Variation in grammatical and rhetorical styles* — PNAS. Source for the human-syntax signals (D1, § Human signals).
-- Kobak, González-Márquez, Horvát & Lause, *Delving into LLM-assisted writing in biomedical publications through excess vocabulary* — Science Advances, 2025. Source for the corroborated vocabulary tiers (C1/C2).
-- Juzek & Ward, *Why Does ChatGPT "Delve" So Much?* — ACL 2025; and *Word Overuse and Alignment in LLMs* (arXiv 2508.01930).
-- Geng & Trotta, *Human-LLM Coevolution* and *Is ChatGPT Transforming Academics' Writing Style?* (arXiv 2404.08627) — source for the copula-avoidance measurement (B3).
-- Huang et al., *Wikipedia in the Era of LLMs: Evolution and Risks* — elegant variation and copula decline.
-- Sun, Yin, Xu, Koller & Liu, *Idiosyncrasies in Large Language Models* (arXiv 2502.12150) — model idiolects (§ Know your own fingerprint).
-- Murray & Tersigni, *Can instructors detect AI-generated papers?* — Journal of Applied Learning & Teaching, 2024 — human detection rates (Layer E).
-- Merrill, Chen & Kumer, *What are the clues that ChatGPT wrote something?* — Washington Post, Nov 2025 — vocabulary drift over time.
+The operative conclusions from all three are already stated above: § Read this first carries the detector finding, Governing Principle 8 carries the fabrication rule, and § C1/C2 carry the evidence tiers. You do not need to open these to apply the skill correctly.
