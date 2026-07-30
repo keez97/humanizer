@@ -8,8 +8,12 @@ Checks #11 (colon-restatement) and #13 (perplexity-anchor coverage) are
 MODEL-JUDGMENT checks and are intentionally omitted from this script;
 the skill routes them through a model self-review pass.
 
+Vocabulary is tiered by evidence (v2.8.0): tier 1 (BANNED_VOCAB) is
+corroborated by cited studies and gates HARD; tier 2 (WATCHLIST_VOCAB) is
+observed-but-uncorroborated and gates soft. See SKILL.md § C2.
+
 Usage:
-  python3 score.py <textfile> [--mode full|light]
+  python3 score.py <textfile> [--mode full|light] [--grok]
   cat file.txt | python3 score.py --mode light
 
 Interface:
@@ -29,13 +33,97 @@ import os
 # Constants (hardcoded defaults — unchanged when --config is absent)
 # ---------------------------------------------------------------------------
 
+# Tier 1 — corroborated by at least one study cited on Wikipedia's
+# "Signs of AI writing" (Kobak et al. 2025, Juzek & Ward 2025, Reinhart et al.,
+# Russell, Geng & Trotta). HARD gate: any occurrence fails the battery.
+#
+# NOTE: taken literally. A word being overused by AI does NOT imply its
+# synonyms are — "underscore" is a tell, "stress" is not. Do not expand this
+# set by intuition; expand it when a study lands.
+# Stored as LEMMAS — inflect() derives plurals, tenses and adverb forms.
 BANNED_VOCAB = {
-    "delve", "tapestry", "robust", "leverage", "pivotal", "intricate",
-    "foster", "navigate", "landscape", "underscore", "realm", "testament",
-    "crucial", "comprehensive", "multifaceted", "nuanced", "seamless",
-    "vibrant", "harness", "beacon", "paramount", "myriad", "plethora",
-    "garner", "bolster", "encompass", "intricacies", "holistic", "synergy",
+    # 2023 – mid-2024 (GPT-4 era)
+    "delve", "tapestry", "testament", "intricate", "intricacy", "garner",
+    "bolster", "boast", "meticulous", "interplay", "landscape", "crucial",
+    "pivotal", "vibrant", "underscore", "valuable",
+    # mid-2024 – mid-2025 (GPT-4o era)
+    "align with", "endure", "foster", "robust",
+    # mid-2025 → now (GPT-5 era) — highest current signal
+    "emphasize", "enhance", "highlight", "showcase",
 }
+
+# Tier 2 — observed in practice but NOT corroborated by any cited study.
+# Soft gate (<=2 per 500w). These read as corporate filler and are usually
+# worth replacing, but a human consultant writes "leverage" and "holistic"
+# without any help from a model, so failing a document over them generates
+# false positives. See SKILL.md § Layer E.
+WATCHLIST_VOCAB = {
+    "leverage", "navigate", "realm", "comprehensive", "multifaceted",
+    "nuanced", "seamless", "harness", "beacon", "paramount", "myriad",
+    "plethora", "encompass", "holistic", "synergy",
+    # Wikipedia lists adjectival "key" but marks it {{citation needed}}, so by
+    # the tier rule it sits here, not in tier 1. Expect noise from innocent
+    # senses (API key, key metric) — that's why it's soft.
+    "key",
+}
+
+# Grok idiolect — superficially "scientific" vocabulary. Opt-in via
+# --grok, since these words are entirely legitimate in technical writing.
+GROK_VOCAB = {"causal", "empirical", "correlate"}
+
+# British -ise/-isation spellings for lemmas stored in -ize/-ization form.
+_BRITISH_VARIANTS = {"emphasize": "emphasise"}
+
+
+def inflect(lemma: str) -> list[str]:
+    """Expand a lemma into its common inflections.
+
+    Matching bare lemmas misses most real hits: a draft says "showcases" and
+    "underscored", not "showcase" and "underscore". Rather than hand-listing
+    every form, derive them.
+
+    Multi-word lemmas ("align with") inflect on the first token only.
+    Some generated forms are nonsense ("valuabled") — harmless, since they
+    never occur in text; the cost of a dead alternation is zero.
+    """
+    if " " in lemma:
+        head, rest = lemma.split(" ", 1)
+        return [f"{f} {rest}" for f in inflect(head)]
+
+    forms = {lemma}
+    vowels = "aeiou"
+
+    if lemma.endswith("e"):
+        stem = lemma[:-1]
+        forms |= {lemma + "s", lemma + "d", stem + "ing"}
+    elif lemma.endswith("y") and len(lemma) > 1 and lemma[-2] not in vowels:
+        stem = lemma[:-1]
+        forms |= {stem + "ies", stem + "ied", lemma + "ing"}
+    elif lemma.endswith(("s", "x", "ch", "sh")):
+        forms |= {lemma + "es", lemma + "ed", lemma + "ing"}
+    else:
+        forms |= {lemma + "s", lemma + "ed", lemma + "ing"}
+
+    # Adjective → adverb (crucially, meticulously, seamlessly) — same tell.
+    forms.add(lemma + "ly")
+
+    if lemma in _BRITISH_VARIANTS:
+        forms |= set(inflect(_BRITISH_VARIANTS[lemma]))
+
+    return sorted(forms)
+
+
+def vocab_pattern(lemma: str) -> str:
+    """Word-boundary regex matching any inflection of `lemma`.
+
+    LIMITATION: no part-of-speech awareness. Wikipedia flags several of these
+    only in specific senses — "landscape" as an abstract noun, "highlight" as
+    a verb, "tapestry" figuratively, "key" as an adjective, "underscore" not
+    meaning a literal underline or incidental music. A purely lexical scorer
+    will flag the innocent senses too. SKILL.md routes the judgment call back
+    to the model; treat a hit here as "look at this", not a conviction.
+    """
+    return r"\b(?:" + "|".join(re.escape(f) for f in inflect(lemma)) + r")\b"
 
 SIGNPOST_WORDS = [
     r"\bmoreover\b", r"\bfurthermore\b", r"\bnevertheless\b",
@@ -460,16 +548,39 @@ def check_paragraph_clustering(paragraphs: list[str]) -> tuple[str, str, bool]:
 
 
 def check_banned_vocab(text: str) -> tuple[str, str, bool, list[str]]:
-    """#6 — Banned vocab: 0 occurrences (HARD)"""
+    """#6 — Banned vocab, tier 1 (corroborated): 0 occurrences (HARD)"""
     text_lower = text.lower()
     found = []
     for word in BANNED_VOCAB:
-        pattern = r"\b" + re.escape(word) + r"\b"
-        if re.search(pattern, text_lower):
+        if re.search(vocab_pattern(word), text_lower):
             found.append(word)
     found.sort()
     value_str = str(len(found)) + (f" ({', '.join(found)})" if found else "")
     return (value_str, "0 hits", len(found) == 0, found)
+
+
+def check_watchlist_vocab(
+    text: str, total_words: int, extra: set[str] | None = None
+) -> tuple[str, str, bool, list[str]]:
+    """#6c — Watchlist vocab, tier 2 (observed, uncorroborated): <=2 per 500w (soft).
+
+    Counts total occurrences, not distinct words: "leverage" three times is
+    three hits. Scales with length so a long document isn't penalised for
+    length alone, with a floor of 2 so short texts get some slack.
+    """
+    vocab = set(WATCHLIST_VOCAB) | (extra or set())
+    text_lower = text.lower()
+    hits = []
+    total_hits = 0
+    for word in sorted(vocab):
+        n = len(re.findall(vocab_pattern(word), text_lower))
+        if n:
+            hits.append(f"{word}x{n}" if n > 1 else word)
+            total_hits += n
+    allowed = max(2, total_words / 500 * 2)
+    passed = total_hits <= allowed
+    value_str = str(total_hits) + (f" ({', '.join(hits)})" if hits else "")
+    return (value_str, f"<={allowed:.0f}/500w-scaled", passed, hits)
 
 
 def check_surface_tell_phrases(text: str) -> tuple[str, str, bool, list[str]]:
@@ -543,13 +654,24 @@ def check_negation_reversal(text: str, total_words: int) -> tuple[str, str, bool
 
 
 def check_hedge_density(text: str, total_words: int) -> tuple[str, str, bool]:
-    """#12 — Hedge density <= 3/200w AND no double-hedges (soft)"""
+    """#12 — Hedge STACKING: <=6/200w AND no double-hedges (soft).
+
+    Changed in v2.8.0. This check previously enforced <=3/200w, which pushed
+    text toward zero hedging. Reinhart et al. (PNAS) found hedging qualifiers
+    and intensifiers ("very", "perhaps", "tends to") occur MORE in human
+    writing than in LLM output — so a de-hedging pass drives prose toward the
+    machine baseline, the same failure mode documented for D2 burstiness in
+    SKILL.md § Honest Limits.
+
+    The ceiling is now a genuine ceiling on stacking rather than a push toward
+    zero. Double-hedges ("may potentially") remain the real tell and stay at 0.
+    """
     text_lower = text.lower()
     hedge_count = 0
     for pattern in HEDGE_WORDS:
         hedge_count += len(re.findall(pattern, text_lower))
 
-    allowed = max(3, total_words / 200 * 3)
+    allowed = max(6, total_words / 200 * 6)
     density_ok = hedge_count <= allowed
 
     double_hedge_found = []
@@ -560,7 +682,7 @@ def check_hedge_density(text: str, total_words: int) -> tuple[str, str, bool]:
     double_ok = len(double_hedge_found) == 0
     passed = density_ok and double_ok
 
-    threshold_str = f"<={allowed:.0f}/200w-scaled, no double-hedges"
+    threshold_str = f"<={allowed:.0f}/200w-scaled (stacking), no double-hedges"
     value_str = (
         f"{hedge_count} hedges"
         + (f", double-hedges: {', '.join(double_hedge_found)}" if double_hedge_found else "")
@@ -591,10 +713,12 @@ def skipped_line(name: str, gate: str) -> str:
 # Main scoring logic
 # ---------------------------------------------------------------------------
 
-def score(text: str, mode: str) -> int:
+def score(text: str, mode: str, grok: bool = False) -> int:
     """
     Run the battery and print the per-check report.
     Returns 0 for PASS, 1 for FAIL.
+
+    grok=True adds the Grok idiolect vocabulary to the tier-2 watchlist.
     """
     prose = strip_non_prose(text)
 
@@ -661,6 +785,12 @@ def score(text: str, mode: str) -> int:
     # #6 banned vocab
     bv_val, bv_thresh, bv_ok, _ = check_banned_vocab(prose)
     record("banned-vocab", bv_val, bv_thresh, "HARD", bv_ok)
+
+    # #6c watchlist vocab — tier 2, observed but uncorroborated (soft)
+    wl_val, wl_thresh, wl_ok, _ = check_watchlist_vocab(
+        prose, total_words, GROK_VOCAB if grok else None
+    )
+    record("watchlist-vocab", wl_val, wl_thresh, "soft", wl_ok)
 
     # #6b surface-tell phrases from voice standard (no-op when config absent)
     st_val, st_thresh, st_ok, _ = check_surface_tell_phrases(prose)
@@ -805,6 +935,15 @@ def main():
             "Missing/malformed → warning to stderr, fall back to hardcoded defaults."
         ),
     )
+    parser.add_argument(
+        "--grok",
+        action="store_true",
+        help=(
+            "Add Grok's idiolect vocabulary (causal, empirical, correlate) to the "
+            "tier-2 watchlist. Off by default: these words are entirely legitimate "
+            "in technical writing."
+        ),
+    )
     args = parser.parse_args()
 
     # Apply config if provided — must happen before any scoring logic runs.
@@ -827,7 +966,7 @@ def main():
     else:
         text = sys.stdin.read()
 
-    sys.exit(score(text, args.mode))
+    sys.exit(score(text, args.mode, grok=args.grok))
 
 
 if __name__ == "__main__":
